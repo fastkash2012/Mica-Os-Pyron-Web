@@ -1,0 +1,9 @@
+{
+  "id": "creative_centre",
+  "name": "Creative Centre",
+  "icon": "\ud83c\udfa8",
+  "type": "system",
+  "format": 2,
+  "engine": "builtin",
+  "builtin": "Creative Centre"
+}

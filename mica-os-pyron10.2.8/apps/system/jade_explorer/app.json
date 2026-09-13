@@ -1,0 +1,9 @@
+{
+  "id": "jade_explorer",
+  "name": "Jade Explorer",
+  "icon": "\ud83d\udcc2",
+  "type": "system",
+  "format": 2,
+  "engine": "builtin",
+  "builtin": "Jade Explorer"
+}

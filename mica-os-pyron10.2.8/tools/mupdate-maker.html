@@ -1,0 +1,236 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Mica .mupdate Maker</title>
+<style>
+  :root { --bg:#12141a; --panel:#1c1f28; --border:#2e3340; --text:#e8eaf0; --muted:#8b93a7; --accent:#4f8cff; --ok:#2ecc71; --warn:#e67e22; }
+  * { box-sizing: border-box; }
+  body { margin:0; font-family: Segoe UI, system-ui, sans-serif; background:var(--bg); color:var(--text); min-height:100vh; }
+  header { padding:16px 20px; border-bottom:1px solid var(--border); display:flex; align-items:center; gap:12px; }
+  header h1 { margin:0; font-size:18px; font-weight:600; }
+  header span { color:var(--muted); font-size:13px; }
+  main { display:grid; grid-template-columns: 320px 1fr; gap:0; min-height:calc(100vh - 58px); }
+  aside { border-right:1px solid var(--border); padding:16px; background:var(--panel); }
+  section { padding:16px 20px; overflow:auto; }
+  label { display:block; font-size:12px; color:var(--muted); margin:10px 0 4px; }
+  input, textarea, select { width:100%; padding:8px 10px; border-radius:8px; border:1px solid var(--border); background:#0f1116; color:var(--text); font:inherit; }
+  textarea { min-height:90px; font-family: ui-monospace, Consolas, monospace; font-size:12px; }
+  button { background:var(--accent); color:#fff; border:none; border-radius:8px; padding:9px 14px; font-weight:600; cursor:pointer; }
+  button.secondary { background:#2a3140; }
+  button:disabled { opacity:0.5; cursor:not-allowed; }
+  .row { display:flex; gap:8px; flex-wrap:wrap; margin-top:12px; }
+  .card { background:var(--panel); border:1px solid var(--border); border-radius:12px; padding:14px; margin-bottom:14px; }
+  .card h3 { margin:0 0 8px; font-size:14px; }
+  .file-row { display:flex; justify-content:space-between; align-items:center; padding:8px 0; border-bottom:1px solid var(--border); font-size:13px; gap:10px; }
+  .file-row code { color:#9ec1ff; word-break:break-all; }
+  .badge { display:inline-block; padding:2px 8px; border-radius:999px; font-size:11px; background:#243049; }
+  .badge.ok { background:#1e3d2f; color:var(--ok); }
+  .badge.warn { background:#3d2a16; color:var(--warn); }
+  pre { background:#0f1116; border:1px solid var(--border); border-radius:10px; padding:12px; overflow:auto; font-size:12px; max-height:280px; }
+  .hint { font-size:12px; color:var(--muted); line-height:1.45; }
+</style>
+</head>
+<body>
+<header>
+  <h1>Mica .mupdate Maker</h1>
+  <span>Independent packager · format 2 · Pyron 10.2.8 · public builds</span>
+</header>
+<main>
+  <aside>
+    <label>Update name</label>
+    <input id="name" value="MyUpdate">
+    <label>Version</label>
+    <input id="version" value="10.2.4">
+    <label>Sign label (optional — public builds need Admin install)</label>
+    <input id="sign" value="public" maxlength="16">
+    <div id="signBadge" class="badge ok" style="margin-top:8px;">Public sign</div>
+    <label>Changelog</label>
+    <textarea id="changelog" placeholder="What this update changes…"></textarea>
+    <label>Install scripts (one per line)</label>
+    <textarea id="scripts" placeholder="mkdir apps/system/foo&#10;enable_plugin myplugin&#10;echo done"></textarea>
+    <div class="row">
+      <button onclick="compile()">Compile .mupdate</button>
+      <button class="secondary" onclick="preview()">Preview JSON</button>
+    </div>
+    <p class="hint" style="margin-top:14px;">
+      Paths under <code>system/</code>, <code>apps/</code>, <code>backend/</code>, <code>frontend/</code>, <code>plugins/</code>
+      install into the OS tree. Other paths stage under updates/.
+      Targets Mica OS Pyron 10.2.x (.mapp folder + layout.json, .mupdate v2). Unsigned signs need Admin approval in Package Manager.
+    </p>
+  </aside>
+  <section>
+    <div class="card">
+      <h3>Files &amp; folders</h3>
+      <p class="hint">Pick files and set the install path relative to Mica root (or leave blank to use the filename).</p>
+      <div class="row">
+        <input type="file" id="filePick" multiple>
+        <button class="secondary" onclick="addFiles()">Add files</button>
+      </div>
+      <div id="fileList"></div>
+    </div>
+    <div class="card">
+      <h3>Plugins (.mplug JSON)</h3>
+      <p class="hint">Paste a full mplug JSON object, or load a .mplug / .json file.</p>
+      <textarea id="pluginJson" placeholder='{"type":"mplug","name":"Demo","js":"","py":""}'></textarea>
+      <div class="row">
+        <input type="file" id="plugPick" accept=".mplug,.json,.txt">
+        <button class="secondary" onclick="addPluginText()">Add plugin JSON</button>
+        <button class="secondary" onclick="addPluginFile()">Add from file</button>
+      </div>
+      <div id="plugList"></div>
+    </div>
+    <div class="card">
+      <h3>Output</h3>
+      <pre id="out">Ready.</pre>
+    </div>
+  </section>
+</main>
+<script>
+const OFFICIAL = ''; // public packager — no privileged sign
+const state = { files: {}, plugins: [] };
+
+document.getElementById('sign').addEventListener('input', updateSignBadge);
+updateSignBadge();
+
+function updateSignBadge() {
+  const s = document.getElementById('sign').value.trim();
+  const el = document.getElementById('signBadge');
+  el.className = 'badge warn';
+  el.textContent = s
+    ? ('Sign: ' + s + ' — Package Manager will ask Admin (public builds)')
+    : 'No sign — Package Manager will ask Admin';
+}
+
+function renderFiles() {
+  const box = document.getElementById('fileList');
+  const keys = Object.keys(state.files);
+  if (!keys.length) { box.innerHTML = '<p class="hint">No files yet.</p>'; return; }
+  box.innerHTML = keys.map(k => `
+    <div class="file-row">
+      <code>${k}</code>
+      <button class="secondary" onclick="removeFile('${k.replace(/'/g, "\\'")}')">Remove</button>
+    </div>`).join('');
+}
+
+function renderPlugins() {
+  const box = document.getElementById('plugList');
+  if (!state.plugins.length) { box.innerHTML = '<p class="hint">No plugins yet.</p>'; return; }
+  box.innerHTML = state.plugins.map((p, i) => `
+    <div class="file-row">
+      <span>${p.name || p.id || ('plugin ' + (i+1))}</span>
+      <button class="secondary" onclick="state.plugins.splice(${i},1);renderPlugins();">Remove</button>
+    </div>`).join('');
+}
+
+function removeFile(k) { delete state.files[k]; renderFiles(); }
+
+function readFileAsTextOrDataURL(file) {
+  return new Promise((resolve, reject) => {
+    const isText = /\.(txt|md|json|js|css|html|htm|py|svg|xml|csv|log|ini|yml|yaml|toml)$/i.test(file.name);
+    const r = new FileReader();
+    r.onerror = reject;
+    r.onload = () => resolve(r.result);
+    if (isText) r.readAsText(file);
+    else r.readAsDataURL(file);
+  });
+}
+
+async function addFiles() {
+  const input = document.getElementById('filePick');
+  for (const f of input.files) {
+    let path = prompt('Install path for ' + f.name + ' (e.g. apps/system/myapp/index.html)', f.name);
+    if (path === null) continue;
+    path = (path || f.name).replace(/\\/g, '/').replace(/^\//, '');
+    state.files[path] = await readFileAsTextOrDataURL(f);
+  }
+  input.value = '';
+  renderFiles();
+}
+
+function addPluginText() {
+  const raw = document.getElementById('pluginJson').value.trim();
+  if (!raw) return alert('Paste plugin JSON first');
+  try {
+    const obj = JSON.parse(raw);
+    obj.type = obj.type || 'mplug';
+    state.plugins.push(obj);
+    document.getElementById('pluginJson').value = '';
+    renderPlugins();
+  } catch (e) {
+    alert('Invalid JSON: ' + e.message);
+  }
+}
+
+async function addPluginFile() {
+  const input = document.getElementById('plugPick');
+  const f = input.files[0];
+  if (!f) return alert('Choose a file');
+  const text = await f.text();
+  try {
+    let obj;
+    if (text.trim().startsWith('{')) obj = JSON.parse(text);
+    else {
+      // try base64
+      try { obj = JSON.parse(decodeURIComponent(escape(atob(text.trim())))); }
+      catch { obj = JSON.parse(atob(text.trim())); }
+    }
+    obj.type = obj.type || 'mplug';
+    state.plugins.push(obj);
+    renderPlugins();
+  } catch (e) {
+    alert('Could not parse plugin: ' + e.message);
+  }
+  input.value = '';
+}
+
+function buildPackage() {
+  const scripts = document.getElementById('scripts').value
+    .split(/\r?\n/).map(s => s.trim()).filter(Boolean);
+  return {
+    type: 'mupdate',
+    format: 2,
+    sign: document.getElementById('sign').value.trim(),
+    name: document.getElementById('name').value.trim() || 'Update',
+    version: document.getElementById('version').value.trim() || '1.0',
+    changelog: document.getElementById('changelog').value.trim(),
+    files: { ...state.files },
+    scripts,
+    plugins: state.plugins.slice(),
+  };
+}
+
+function encodePackage(pkg) {
+  // classic Mica package encoding
+  return btoa(unescape(encodeURIComponent(JSON.stringify(pkg))));
+}
+
+function preview() {
+  const pkg = buildPackage();
+  document.getElementById('out').textContent = JSON.stringify(pkg, null, 2);
+}
+
+function compile() {
+  const pkg = buildPackage();
+  if (!pkg.sign) {
+    if (!confirm('No sign set — installs will require Admin. Continue?')) return;
+  }
+  const encoded = encodePackage(pkg);
+  const fname = (pkg.name.replace(/\s+/g, '') || 'Update') + '-v' + pkg.version + '.mupdate';
+  const blob = new Blob([encoded], { type: 'application/mupdate;charset=utf-8' });
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = fname;
+  a.click();
+  URL.revokeObjectURL(a.href);
+  document.getElementById('out').textContent =
+    'Compiled ' + fname + '\n' +
+    'sign: ' + pkg.sign + (pkg.sign === OFFICIAL ? ' (official)' : ' (admin required)') + '\n' +
+    'files: ' + Object.keys(pkg.files).length + '\n' +
+    'plugins: ' + pkg.plugins.length + '\n' +
+    'scripts: ' + pkg.scripts.length + '\n\n' +
+    JSON.stringify(pkg, null, 2).slice(0, 4000);
+}
+</script>
+</body>
+</html>

@@ -1,0 +1,148 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Mica OS Pyron 10.2.8</title>
+    <link rel="stylesheet" href="/static/css/style.css">
+</head>
+<body class="theme-dark tb-pos-bottom">
+
+<div id="lock-screen">
+    <div class="ls-ambient" aria-hidden="true"></div>
+
+    <!-- First-run -->
+    <div class="ls-panel" id="ls-gate" style="display:none;">
+        <div class="ls-glass">
+            <div class="ls-mark">❖</div>
+            <h1 class="ls-heading">Welcome to Mica</h1>
+            <p class="ls-caption">Pyron · a calm desktop for real work</p>
+            <div class="ls-actions">
+                <button type="button" class="ls-btn primary" onclick="lsChooseCreate()">Create Account</button>
+                <button type="button" class="ls-btn secondary" onclick="enterGuestMode()">Guest Mode</button>
+            </div>
+            <p class="ls-footnote">Guest sessions are temporary and cleared on logout.</p>
+        </div>
+    </div>
+
+    <!-- Sign in -->
+    <div class="ls-panel" id="ls-login" style="display:none;">
+        <div class="ls-glass">
+            <div class="ls-mark small">❖</div>
+            <h1 class="ls-heading">Sign in</h1>
+            <p class="ls-caption">Mica OS Pyron</p>
+            <div class="ls-fields">
+                <select id="ls-user" class="ls-field" aria-label="Account"></select>
+                <input type="password" id="ls-pin" class="ls-field pin" placeholder="PIN" autocomplete="current-password"
+                       onkeydown="if(event.key==='Enter') unlockOS()">
+            </div>
+            <div class="ls-actions">
+                <button type="button" class="ls-btn primary" onclick="unlockOS()">Unlock</button>
+            </div>
+            <div class="ls-footer-links">
+                <button type="button" class="ls-text-btn" onclick="lsChooseCreate()">Create account</button>
+                <span class="ls-dot">·</span>
+                <button type="button" class="ls-text-btn" onclick="enterGuestMode()">Guest Mode</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Create / restore -->
+    <div class="ls-panel" id="ls-setup" style="display:none;">
+        <div class="ls-glass">
+            <div class="ls-mark small">❖</div>
+            <h1 class="ls-heading">Create account</h1>
+            <p class="ls-caption">New profile or restore a .mica backup</p>
+            <div class="ls-fields">
+                <input type="text" id="setup-user" class="ls-field" placeholder="Username" autocomplete="username">
+                <input type="password" id="setup-pin" class="ls-field pin" placeholder="PIN" autocomplete="new-password"
+                       onkeydown="if(event.key==='Enter') setupOS()">
+            </div>
+            <div class="ls-actions">
+                <button type="button" class="ls-btn primary" onclick="setupOS()">Continue</button>
+                <button type="button" class="ls-btn secondary" onclick="document.getElementById('os-restore').click()">Upload .mica</button>
+            </div>
+            <input type="file" id="os-restore" class="native-uploader" hidden accept=".mica" onchange="restoreMica(event)">
+            <div class="ls-footer-links">
+                <button type="button" class="ls-text-btn" onclick="showLogin()">Back</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Welcome splash (on lock layer) -->
+    <div id="ls-splash" class="ls-splash" style="display:none;" aria-hidden="true">
+        <div class="ls-splash-inner">
+            <div class="ls-splash-mark">❖</div>
+            <div class="ls-splash-text">welcome</div>
+        </div>
+    </div>
+</div>
+
+
+<div id="setup-wizard" style="display:none;">
+  <div class="sw-card">
+    <div class="sw-progress"><div class="sw-bar" id="sw-bar"></div></div>
+    <div id="sw-step"></div>
+  </div>
+</div>
+<div id="mica-boot-loader" style="display:none;" aria-hidden="true">
+  <div class="mbl-orb"></div>
+  <div class="mbl-text">Starting Mica OS…</div>
+</div>
+
+<div id="toast-container"></div>
+<div id="desktop" onclick="closeMenus()"></div>
+<div id="mica-fs-layer"></div>
+
+<div id="vertical-bubble" onmousedown="dragBubble(event)" oncontextmenu="bubbleShellContext(event)">
+    <div class="bubble-btn" data-slot="0" id="bubble-slot-0" title="Quick Access" onclick="bubbleClick(0)" oncontextmenu="bubbleContext(event,0)">⚡</div>
+    <div class="bubble-btn" data-slot="1" id="bubble-slot-1" title="Settings" onclick="bubbleClick(1)" oncontextmenu="bubbleContext(event,1)">⚙️</div>
+    <div class="bubble-btn" data-slot="2" id="bubble-slot-2" title="Clear RAM" style="color:#ff5f56;" onclick="bubbleClick(2)" oncontextmenu="bubbleContext(event,2)">🧹</div>
+</div>
+
+<div id="quick-access" aria-label="Quick menu">
+    <div class="qa-chrome">
+      <b id="qa-title" class="qa-title">Quick menu</b>
+      <button type="button" class="qa-close" onclick="toggleQuickAccess()" title="Close">✕</button>
+    </div>
+    <div id="qa-body" class="qa-body"></div>
+</div>
+
+<div id="taskbar" class="pos-bottom">
+    <div class="tb-start-btn" onclick="toggleMenu(event)">❖ <span>Start</span></div>
+    <div id="tb-taskview" class="tb-app-btn" title="MicaTasking" onclick="event.stopPropagation();openTaskView();"></div>
+    <div id="tb-apps"></div>
+    <div id="tb-bubble-pin" title="Quick menu" onclick="toggleQuickAccess();event.stopPropagation();" oncontextmenu="bubbleShellContext(event)">⚡</div>
+    <div class="tb-sys"><span id="tb-clock">00:00</span></div>
+</div>
+
+<div id="start-menu">
+    <div class="sm-search-wrap">
+        <input class="sm-search" id="sm-search" placeholder="Type here to search" oninput="filterStartMenu(this.value)" autocomplete="off">
+    </div>
+    <div class="sm-body">
+        <div class="sm-side">
+            <button title="Apps" onclick="renderStartMenu('tiles')">❖</button>
+            <button title="All apps" onclick="renderStartMenu('list')">☰</button>
+            <button title="Settings" onclick="App.open('Amber Settings');toggleMenu();">⚙</button>
+            <button title="Explorer" onclick="App.open('Jade Explorer');toggleMenu();">📂</button>
+            <div style="flex:1"></div>
+            <button title="Power" onclick="logout();">⏻</button>
+        </div>
+        <div class="sm-main">
+            <div class="sm-section" id="sm-section-label">Features</div>
+            <div id="sm-app-list" class="sm-grid"></div>
+        </div>
+    </div>
+    <div class="sm-footer">
+        <span id="sm-user-label">User</span>
+        <button onclick="document.getElementById('os-install-app').click()" style="padding:5px 10px;font-size:11px;">+ Install</button>
+        <input type="file" id="os-install-app" class="native-uploader" hidden accept=".mapp,.mpkg,.mplug,.mupdate,.mica,.py" onchange="installPackageFile(event)">
+    </div>
+</div>
+
+<script src="/static/js/api.js"></script>
+<script src="/static/js/apps.js"></script>
+<script src="/static/js/main.js"></script>
+</body>
+</html>

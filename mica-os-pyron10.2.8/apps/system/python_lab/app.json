@@ -1,0 +1,9 @@
+{
+  "id": "python_lab",
+  "name": "Python Lab",
+  "icon": "\ud83d\udc0d",
+  "type": "system",
+  "format": 2,
+  "engine": "builtin",
+  "builtin": "Python Lab"
+}

@@ -1,0 +1,3851 @@
+
+/* ── Base Quick Access panel (critical) ── */
+#quick-access {
+  position: fixed;
+  top: 50px;
+  right: 80px;
+  width: 280px;
+  max-width: 92vw;
+  max-height: min(70vh, 520px);
+  background: var(--win-bg);
+  backdrop-filter: blur(16px);
+  border-radius: var(--rad-lg);
+  border: 1px solid var(--dock-border);
+  box-shadow: var(--shadow);
+  display: none;
+  flex-direction: column;
+  padding: 14px;
+  z-index: 99999;
+  overflow-y: auto;
+  overflow-x: hidden;
+  scrollbar-width: none;
+  color: var(--text);
+}
+#quick-access.open {
+  display: flex !important;
+}
+/* pyron-fullscreen */
+html, body { width: 100%; height: 100%; overflow: hidden; margin: 0; padding: 0; }
+#desktop, #lock-screen { width: 100vw; height: 100vh; }
+
+:root { 
+    --bg: linear-gradient(135deg, #e5e4e2 0%, #b0b4b8 100%); 
+    --dock-bg: rgba(255,255,255,0.7); --dock-border: rgba(255,255,255,0.8); 
+    --well-bg: rgba(123,132,148,0.3); --accent: #aab2bd; 
+    --win-bg: #f4f4f5; --text: #2c2c2c; 
+    --input-bg: rgba(0,0,0,0.05); --blur: blur(25px); 
+    --rad-lg: 18px; --rad-md: 12px; --rad-sm: 8px; 
+    --anim: 0.25s cubic-bezier(0.2, 0.8, 0.2, 1); 
+    --shadow: 0 12px 40px rgba(0,0,0,0.15); 
+}
+body.theme-dark { --dock-bg: rgba(20,20,20,0.85); --dock-border: rgba(255,255,255,0.1); --well-bg: rgba(123,132,148,0.2); --win-bg: #1e1e22; --text: #f0f0f0; --input-bg: rgba(255,255,255,0.08); --bg: linear-gradient(135deg, #1e242c 0%, #0a0b0c 100%); }
+body.theme-obsidian { --bg: #050505; --dock-bg: rgba(0,0,0,0.9); --dock-border: #333; --well-bg: #111; --win-bg: #0e0e0e; --text: #e0e0e0; --input-bg: #000; --accent: #555; }
+body.theme-nova { --bg: linear-gradient(135deg, #0f0c29, #302b63, #24243e); --dock-bg: rgba(15,12,41,0.8); --dock-border: rgba(200,150,255,0.3); --well-bg: rgba(255,255,255,0.1); --win-bg: #1e193c; --text: #fff; --input-bg: rgba(0,0,0,0.4); --accent: #ff00cc; }
+
+* { box-sizing: border-box; } 
+body, html { margin: 0; padding: 0; height: 100%; overflow: hidden; font-family: -apple-system, BlinkMacSystemFont, sans-serif; background: var(--bg); background-size: cover; background-position: center; color: var(--text); user-select: none; }
+
+#lock-screen { position: fixed; inset: 0; background: var(--bg); background-size: cover; z-index: 99999; display: flex; align-items: center; justify-content: center; transition: opacity 0.4s; }
+.ls-box { background: var(--win-bg); backdrop-filter: var(--blur); padding: 40px; border-radius: var(--rad-lg); box-shadow: var(--shadow); border: 1px solid var(--dock-border); text-align: center; width: 340px; z-index: 10; }
+
+#desktop { position: relative; width: 100vw; height: calc(100vh - 45px); overflow: hidden; z-index: 1; }
+.dt-icon { position: absolute; width: 80px; height: 80px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 6px; color: white; text-shadow: 0 1px 3px rgba(0,0,0,0.8); cursor: pointer; text-align: center; font-size: 11px; padding: 5px; border-radius: var(--rad-sm); transition: background 0.2s; z-index: 2; }
+.dt-icon:hover { background: rgba(255,255,255,0.2); backdrop-filter: blur(4px); }
+.dt-icon span.i { font-size: 34px; text-shadow: none; filter: drop-shadow(0 2px 4px rgba(0,0,0,0.4)); pointer-events: none; }
+.dt-icon img { width: 36px; height: 36px; object-fit: contain; border-radius: 8px; pointer-events: none; filter: drop-shadow(0 2px 4px rgba(0,0,0,0.4)); }
+.tb-app-btn img { width: 18px; height: 18px; object-fit: contain; border-radius: 3px; }
+.sm-tile img { width: 28px; height: 28px; object-fit: contain; border-radius: 6px; }
+
+#taskbar { position: fixed; bottom: 0; left: 0; width: 100%; height: 45px; background: var(--dock-bg); backdrop-filter: var(--blur); border-top: 1px solid var(--dock-border); display: flex; align-items: center; padding: 0 10px; z-index: 90000; box-shadow: 0 -2px 10px rgba(0,0,0,0.1); }
+.tb-start-btn { font-weight: bold; padding: 8px 15px; background: var(--well-bg); border-radius: var(--rad-sm); cursor: pointer; transition: var(--anim); margin-right: 15px; display: flex; align-items: center; gap: 5px; border: 1px solid var(--dock-border); }
+.tb-start-btn:hover { background: var(--text); color: var(--win-bg); }
+#tb-apps { flex-grow: 1; display: flex; gap: 5px; overflow-x: auto; padding-right: 15px; }
+.tb-app-btn { padding: 8px 15px; background: var(--win-bg); border-radius: var(--rad-sm); cursor: pointer; font-size: 12px; display: flex; align-items: center; gap: 8px; border: 1px solid var(--dock-border); white-space: nowrap; transition: var(--anim); }
+.tb-app-btn:hover { background: var(--well-bg); }
+.tb-sys { font-size: 13px; font-weight: bold; padding: 0 15px; border-left: 1px solid var(--dock-border); }
+
+#vertical-bubble { position: absolute; top: 50px; right: 20px; display: flex; flex-direction: column; gap: 10px; background: var(--dock-bg); backdrop-filter: var(--blur); padding: 10px; border-radius: 40px; border: 1px solid var(--dock-border); box-shadow: var(--shadow); z-index: 100000; cursor: grab; }
+#vertical-bubble:active { cursor: grabbing; }
+.bubble-btn { width: 44px; height: 44px; border-radius: 50%; background: var(--win-bg); display: flex; align-items: center; justify-content: center; font-size: 20px; cursor: pointer; transition: var(--anim); border: 1px solid var(--dock-border); }
+.bubble-btn:hover { transform: scale(1.1); background: var(--text); color: var(--win-bg); }
+
+
+.qa-item { display: flex; justify-content: space-between; align-items: center; padding: 12px 0; font-size: 13px; font-weight: 500; }
+.qa-item input[type=range] { width: 120px; }
+
+#start-menu { position: absolute; bottom: 55px; left: 10px; width: 420px; max-height: min(70vh, 560px); background: var(--win-bg); backdrop-filter: var(--blur); border-radius: var(--rad-lg); border: 1px solid var(--dock-border); box-shadow: var(--shadow); display: none; flex-direction: column; padding: 0; z-index: 99999; animation: popUp var(--anim); overflow: hidden; }
+#start-menu.open { display: flex; }
+.sm-search-wrap { padding: 14px 14px 8px; border-bottom: 1px solid var(--dock-border); }
+.sm-search { width: 100%; padding: 10px 12px; border-radius: 8px; border: 1px solid var(--dock-border); background: var(--input-bg); color: var(--text); font-size: 13px; }
+.sm-body { display: flex; flex: 1; min-height: 0; max-height: 420px; }
+.sm-side { width: 48px; border-right: 1px solid var(--dock-border); display: flex; flex-direction: column; align-items: center; gap: 8px; padding: 12px 0; background: rgba(0,0,0,0.12); }
+.sm-side button { background: transparent; border: none; color: var(--text); font-size: 18px; cursor: pointer; padding: 8px; border-radius: 8px; width: 40px; height: 40px; }
+.sm-side button:hover { background: var(--well-bg); }
+.sm-main { flex: 1; overflow-y: auto; padding: 12px 14px 16px; }
+.sm-section { font-size: 11px; opacity: 0.55; font-weight: 700; margin: 8px 0 10px; letter-spacing: 0.04em; }
+.sm-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; }
+.sm-tile { display: flex; flex-direction: column; align-items: center; gap: 6px; padding: 10px 6px; border-radius: 10px; cursor: pointer; text-align: center; font-size: 11px; border: 1px solid transparent; }
+.sm-tile:hover { background: var(--well-bg); border-color: var(--dock-border); }
+.sm-list { display: flex; flex-direction: column; gap: 2px; }
+.sm-list-item { display: flex; align-items: center; gap: 10px; padding: 8px 10px; border-radius: 8px; cursor: pointer; font-size: 13px; }
+.sm-list-item:hover { background: var(--well-bg); }
+.sm-footer { display: flex; justify-content: space-between; align-items: center; padding: 10px 14px; border-top: 1px solid var(--dock-border); font-size: 12px; }
+
+.sm-app { display: flex; flex-direction: column; align-items: center; gap: 5px; padding: 12px 5px; border-radius: var(--rad-md); cursor: pointer; font-size: 11px; text-align: center; transition: var(--anim); }
+.sm-app:hover { background: var(--well-bg); }
+
+.window { position: absolute; width: 700px; height: 520px; background: var(--win-bg); border-radius: var(--rad-lg); border: 1px solid var(--dock-border); display: flex; flex-direction: column; box-shadow: var(--shadow); resize: both; overflow: hidden; min-width: 400px; min-height: 300px; z-index: 10; opacity: 1 !important; backdrop-filter: none !important; -webkit-backdrop-filter: none !important; }
+.is-dragging { transition: none !important; opacity: 1 !important; } .is-dragging .win-content { pointer-events: none; }
+.window { opacity: 1 !important; background: var(--win-bg); }
+.window.is-dragging { opacity: 1 !important; }
+.win-header { padding: 12px 16px; cursor: move; display: flex; justify-content: space-between; align-items: center; font-weight: 600; font-size: 13px; border-bottom: 1px solid var(--dock-border); background: rgba(0,0,0,0.03); }
+.win-content { flex-grow: 1; display: flex; flex-direction: column; overflow: hidden; position: relative; }
+
+input, textarea, button, select { background: var(--input-bg); color: var(--text); border: 1px solid var(--dock-border); padding: 10px 14px; border-radius: var(--rad-md); outline: none; font-family: inherit; font-size: 13px; }
+button { cursor: pointer; transition: var(--anim); font-weight: 500; } button:hover { background: var(--well-bg); border-color: transparent; }
+.primary-btn { background: var(--text); color: var(--win-bg); border: none; } .primary-btn:hover { background: var(--accent); color: #000; }
+
+@keyframes popIn { from { opacity: 0; transform: scale(0.95); } to { opacity: 1; transform: scale(1); } }
+@keyframes popUp { from { opacity: 0; transform: translateY(15px); } to { opacity: 1; transform: translateY(0); } }
+#toast-container { position: absolute; top: 20px; right: 20px; z-index: 100001; display: flex; flex-direction: column; gap: 10px; pointer-events: none; }
+.toast { background: var(--win-bg); backdrop-filter: var(--blur); color: var(--text); padding: 12px 20px; border-radius: var(--rad-md); border: 1px solid var(--dock-border); box-shadow: var(--shadow); font-size: 13px; font-weight: 500; }
+
+.store-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 15px; padding: 20px; overflow-y: auto; }
+.store-item { background: var(--input-bg); border: 1px solid var(--dock-border); border-radius: var(--rad-md); padding: 15px; display: flex; flex-direction: column; align-items: center; text-align: center; gap: 10px; }
+
+/* Quick fixes for your existing style */
+.dt-icon { width: 88px; text-align: center; cursor: pointer; }
+.context-item { padding: 8px 20px; cursor: pointer; }
+.context-item:hover { background: var(--well-bg); }
+.window { min-width: 400px; min-height: 300px; }
+/* BEAUTIFUL WINDOW CONTROLS */
+.win-controls {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+    flex-shrink: 0;
+}
+
+.win-btn,
+.win-btn.min-btn,
+.win-btn.max-btn,
+.win-btn.close-btn,
+.mica-fs-btn {
+    width: 12px !important;
+    height: 12px !important;
+    min-width: 12px !important;
+    min-height: 12px !important;
+    max-width: 12px !important;
+    max-height: 12px !important;
+    border-radius: 50% !important;
+    display: inline-block !important;
+    box-sizing: border-box !important;
+    padding: 0 !important;
+    margin: 0 !important;
+    border: 1px solid rgba(0,0,0,0.18) !important;
+    cursor: pointer;
+    flex: 0 0 12px !important;
+    font-size: 0 !important;
+    line-height: 0 !important;
+    color: transparent !important;
+    overflow: hidden;
+    transition: transform 0.15s;
+}
+.win-btn::before, .mica-fs-btn::before { content: none !important; }
+
+.min-btn { background: #ffbd2e !important; }
+.max-btn { background: #28ca42 !important; }
+.close-btn { background: #ff5f56 !important; }
+.mica-fs-btn { background: #c084fc !important; }
+
+.win-btn:hover, .mica-fs-btn:hover {
+    transform: scale(1.15);
+    box-shadow: 0 0 6px rgba(0,0,0,0.25);
+}
+
+.win-header {
+    padding: 10px 16px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    background: rgba(0,0,0,0.05);
+    border-bottom: 1px solid var(--dock-border);
+}
+.file-action-btn {
+    background: var(--win-bg);
+    border: 1px solid var(--dock-border);
+    border-radius: 6px;
+    padding: 4px 8px;
+    cursor: pointer;
+    font-size: 12px;
+}
+.file-action-btn:hover {
+    background: var(--text);
+    color: var(--win-bg);
+}
+.win-controls { display: flex; gap: 8px; align-items: center; }
+.win-btn {
+    width: 14px; height: 14px; border-radius: 50%;
+    cursor: pointer; border: 1px solid rgba(0,0,0,0.2);
+    transition: transform 0.15s;
+}
+.win-btn:hover { transform: scale(1.15); }
+.min-btn { background: #ffbd2e; }
+.max-btn { background: #28ca42; }
+.close-btn { background: #ff5f56; }
+
+/* ── Taskbar overhaul (core) ── */
+#tb-apps {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px !important;
+    flex: 1;
+    overflow: auto;
+}
+#tb-apps::-webkit-scrollbar { display: none; }
+
+#taskbar { transition: all 0.3s cubic-bezier(0.2, 0.8, 0.2, 1); z-index: 90000; }
+
+#taskbar.pos-bottom { bottom: 0; left: 0; width: 100%; height: 45px; flex-direction: row; }
+#taskbar.pos-top { top: 0; left: 0; bottom: auto; width: 100%; height: 45px; flex-direction: row; }
+#taskbar.pos-left { top: 0; left: 0; bottom: auto; width: 45px; height: 100%; flex-direction: column; padding: 10px 0; }
+#taskbar.pos-right { top: 0; right: 0; left: auto; bottom: auto; width: 45px; height: 100%; flex-direction: column; padding: 10px 0; }
+
+#taskbar.pos-left .tb-start-btn span,
+#taskbar.pos-right .tb-start-btn span { display: none; }
+#taskbar.pos-left .tb-sys,
+#taskbar.pos-right .tb-sys {
+    border-left: none; border-top: 1px solid var(--dock-border);
+    padding: 15px 0 0 0; writing-mode: vertical-rl; margin-top: auto;
+}
+#taskbar.pos-left #tb-apps,
+#taskbar.pos-right #tb-apps {
+    flex-direction: column; overflow-y: auto; overflow-x: hidden;
+    justify-content: flex-start;
+}
+
+.tb-app-btn {
+    position: relative;
+    width: 36px; height: 36px;
+    border-radius: 10px;
+    display: flex; align-items: center; justify-content: center;
+    padding: 0; margin: 0;
+    background: transparent;
+    border: 1px solid transparent;
+    transition: all 0.2s;
+    cursor: pointer;
+    color: var(--text);
+    font-size: 12px;
+}
+.tb-app-btn:hover { background: var(--well-bg); transform: scale(1.05); }
+.tb-app-btn.minimized { opacity: 0.55; }
+.tb-app-btn.active::after {
+    content: '';
+    position: absolute;
+    background: var(--text);
+    border-radius: 50%;
+    width: 4px; height: 4px;
+    bottom: -2px; left: 50%; transform: translateX(-50%);
+}
+#taskbar.pos-left .tb-app-btn.active::after { left: -2px; top: 50%; bottom: auto; transform: translateY(-50%); }
+#taskbar.pos-right .tb-app-btn.active::after { right: -2px; left: auto; top: 50%; bottom: auto; transform: translateY(-50%); }
+
+.tb-quick-close {
+    position: absolute; top: -5px; right: -5px;
+    width: 16px; height: 16px;
+    background: #ff5f56; color: white;
+    font-size: 10px; font-weight: bold;
+    border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    opacity: 0; transform: scale(0.8);
+    transition: all 0.15s;
+    z-index: 10;
+}
+.tb-app-btn:hover .tb-quick-close { opacity: 1; transform: scale(1); }
+.tb-quick-close:hover { background: #ff3b30; }
+
+#quick-access {
+    width: 240px !important;
+    max-width: 90vw;
+    padding: 12px !important;
+}
+
+
+.file-item.selected { outline: 2px solid #4f8cff; background: rgba(79,140,255,0.12) !important; }
+.context-item:hover { background: var(--well-bg); }
+
+.folder-item {
+  padding: 8px 10px;
+  border-radius: 8px;
+  cursor: pointer;
+  margin-bottom: 2px;
+  user-select: none;
+}
+.folder-item:hover { background: var(--well-bg); }
+.folder-item.drop-target { background: rgba(79,140,255,0.25) !important; outline: 1px solid #4f8cff; }
+
+/* lock-screen wallpaper support */
+#lock-screen {
+  background-size: cover;
+  background-position: center;
+  background-repeat: no-repeat;
+}
+body {
+  background-size: cover;
+  background-position: center;
+  background-repeat: no-repeat;
+  background-attachment: fixed;
+}
+
+/* Taskbar positions (Pyron 7 / 6.6 style) */
+#taskbar {
+  position: fixed !important;
+  z-index: 50000;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  box-sizing: border-box;
+  background: var(--dock-bg);
+  backdrop-filter: var(--blur);
+  border: 1px solid var(--dock-border);
+}
+#taskbar.pos-bottom { left: 0 !important; right: 0 !important; bottom: 0 !important; top: auto !important; width: 100% !important; height: 45px !important; flex-direction: row; padding: 0 10px; }
+#taskbar.pos-top { left: 0 !important; right: 0 !important; top: 0 !important; bottom: auto !important; width: 100% !important; height: 45px !important; flex-direction: row; padding: 0 10px; }
+#taskbar.pos-left { top: 0 !important; bottom: 0 !important; left: 0 !important; right: auto !important; width: 45px !important; height: 100% !important; flex-direction: column; padding: 10px 0; }
+#taskbar.pos-right { top: 0 !important; bottom: 0 !important; right: 0 !important; left: auto !important; width: 45px !important; height: 100% !important; flex-direction: column; padding: 10px 0; }
+#taskbar.pos-left #tb-apps,
+#taskbar.pos-right #tb-apps { flex-direction: column; overflow: auto; }
+#taskbar.pos-left .tb-sys,
+#taskbar.pos-right .tb-sys { flex-direction: column; margin-top: auto; }
+#taskbar.pos-left .tb-start-btn span,
+#taskbar.pos-right .tb-start-btn span { display: none; }
+
+/* Disable animations when toggled off in Settings */
+body.no-anim,
+body.no-anim * {
+  animation: none !important;
+  transition: none !important;
+}
+body.no-anim .window { animation: none !important; }
+body.no-anim #start-menu,
+body.no-anim #quick-access { animation: none !important; }
+
+.window.win-minimizing {
+  animation: winMinOut 0.18s ease-in forwards !important;
+  pointer-events: none;
+}
+.window.win-restoring {
+  animation: winMinIn 0.2s ease-out !important;
+}
+.window.win-max-anim {
+  transition: left 0.2s ease, top 0.2s ease, width 0.2s ease, height 0.2s ease !important;
+}
+@keyframes winMinOut {
+  from { opacity: 1; transform: scale(1); }
+  to { opacity: 0; transform: scale(0.88) translateY(30px); }
+}
+@keyframes winMinIn {
+  from { opacity: 0; transform: scale(0.9) translateY(20px); }
+  to { opacity: 1; transform: scale(1) translateY(0); }
+}
+
+.qa-slider-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 8px;
+  width: 100%;
+}
+.qa-slider-row .qa-ico { width: 18px; flex-shrink: 0; }
+.qa-slider-row .qa-val { width: 40px; text-align: right; font-size: 11px; flex-shrink: 0; }
+.qa-slider-row input[type=range] {
+  flex: 1 1 auto;
+  width: 100%;
+  min-width: 0;
+  margin: 0;
+  -webkit-appearance: none;
+  appearance: none;
+  height: 6px;
+  border-radius: 4px;
+  background: rgba(255,255,255,0.15);
+  outline: none;
+}
+.qa-slider-row input[type=range]::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  background: var(--text, #8cf);
+  cursor: pointer;
+  border: none;
+}
+.qa-slider-row input[type=range]::-moz-range-thumb {
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  background: var(--text, #8cf);
+  cursor: pointer;
+  border: none;
+}
+.qa-slider-row input[type=range]::-moz-range-track {
+  height: 6px;
+  border-radius: 4px;
+  background: rgba(255,255,255,0.15);
+}
+
+
+/* Quick menu widgets */
+#quick-access {
+  width: 280px;
+  max-height: min(62vh, 440px);
+  overflow-y: auto;
+  overflow-x: hidden;
+  scrollbar-width: none; /* Firefox */
+  -ms-overflow-style: none;
+  padding: 14px !important;
+}
+#quick-access::-webkit-scrollbar { width: 0; height: 0; display: none; }
+.qa-widgets {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.qa-widget {
+  background: rgba(255,255,255,0.04);
+  border: 1px solid var(--dock-border, #3a3a40);
+  border-radius: 8px;
+  padding: 8px 10px;
+}
+.qa-widget-title {
+  font-size: 10px;
+  opacity: 0.45;
+  margin-bottom: 4px;
+  font-weight: 600;
+  letter-spacing: 0.3px;
+  text-transform: uppercase;
+}
+.qa-edit-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 4px;
+}
+.qa-chip {
+  font-size: 11px;
+  padding: 5px 10px;
+  border-radius: 14px;
+  border: 1px solid var(--dock-border);
+  background: rgba(255,255,255,0.05);
+  cursor: pointer;
+  color: inherit;
+  transition: background 0.12s, border-color 0.12s;
+}
+.qa-chip:hover { background: rgba(0,120,212,0.2); }
+.qa-chip.on {
+  background: rgba(0,120,212,0.35);
+  border-color: #0078d4;
+}
+.qa-chip .ord {
+  opacity: 0.45;
+  margin-left: 4px;
+  font-size: 10px;
+}
+
+/* Bubble pin modes */
+#vertical-bubble.pin-topbar {
+  position: fixed !important;
+  top: 0 !important;
+  left: 0 !important;
+  right: 0 !important;
+  width: 100% !important;
+  height: 28px !important;
+  flex-direction: row !important;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 6px;
+  padding: 0 12px !important;
+  border-radius: 0 !important;
+  border-left: none !important;
+  border-right: none !important;
+  border-top: none !important;
+  z-index: 100050 !important;
+  cursor: default !important;
+}
+#vertical-bubble.pin-topbar .bubble-btn {
+  width: 22px;
+  height: 22px;
+  font-size: 12px;
+  border-radius: 50%;
+}
+#vertical-bubble.pin-taskbar {
+  display: none !important;
+}
+#tb-bubble-pin {
+  display: none;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  border-radius: 8px;
+  background: var(--win-bg);
+  border: 1px solid var(--dock-border);
+  cursor: pointer;
+  font-size: 16px;
+  margin-left: 6px;
+  flex-shrink: 0;
+}
+#tb-bubble-pin:hover { background: var(--well-bg); }
+body.bubble-pin-taskbar #tb-bubble-pin { display: flex; }
+body.bubble-pin-topbar #desktop { margin-top: 28px; height: calc(100vh - 45px - 28px) !important; }
+body.bubble-pin-topbar #taskbar.pos-top { top: 28px; }
+/* display scale / aspect container */
+#mica-display-root {
+  position: fixed;
+  inset: 0;
+  transform-origin: center center;
+  z-index: 0;
+}
+body.mica-scaled #desktop,
+body.mica-scaled #taskbar,
+body.mica-scaled #vertical-bubble,
+body.mica-scaled #quick-access,
+body.mica-scaled #start-menu,
+body.mica-scaled #lock-screen,
+body.mica-scaled #toast-container {
+  /* scale applied via zoom on html */
+}
+
+.qa-widget-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 6px;
+}
+.qa-tile {
+  background: rgba(255,255,255,0.06);
+  border: 1px solid transparent;
+  border-radius: 8px;
+  padding: 10px 8px;
+  text-align: center;
+  cursor: pointer;
+  font-size: 12px;
+  transition: background 0.15s;
+}
+.qa-tile:hover { background: rgba(0,120,212,0.25); }
+.qa-tile .qa-tile-ico { font-size: 18px; display: block; margin-bottom: 4px; }
+.qa-clock-big { font-size: 28px; font-weight: 600; letter-spacing: 1px; }
+.qa-clock-date { font-size: 12px; opacity: 0.55; margin-top: 2px; }
+.qa-stat-row { display: flex; justify-content: space-between; font-size: 12px; margin: 3px 0; }
+.qa-stat-bar { height: 4px; background: rgba(255,255,255,0.1); border-radius: 2px; margin-top: 3px; overflow: hidden; }
+.qa-stat-bar > div { height: 100%; background: #0078d4; border-radius: 2px; }
+.qa-edit-item {
+  display: flex; align-items: center; gap: 8px; padding: 6px 0;
+  font-size: 12px; border-bottom: 1px solid rgba(255,255,255,0.06);
+}
+
+
+/* Dropdown readability — avoid color-scheme (causes WebEngine full-window flicker) */
+select, .mica-select {
+  background-color: #2a2a2e;
+  color: #eee;
+  border: 1px solid #444;
+  border-radius: 6px;
+  padding: 6px 8px;
+}
+select option, .mica-select option {
+  background-color: #2a2a2e;
+  color: #eee;
+}
+body:not(.theme-dark):not(.theme-obsidian):not(.theme-nova) select {
+  background-color: #fff;
+  color: #1a1a1a;
+  border-color: #ccc;
+}
+body:not(.theme-dark):not(.theme-obsidian):not(.theme-nova) select option {
+  background-color: #fff;
+  color: #1a1a1a;
+}
+select:focus, .mica-select:focus {
+  outline: 1px solid #4f8cff;
+}
+
+/* Display viewport letterbox — real content area, no zoom side-effects */
+body.mica-letterbox {
+  background: #000 !important;
+}
+#mica-viewport-frame {
+  position: fixed;
+  z-index: 0;
+  pointer-events: none;
+  box-sizing: border-box;
+}
+body.mica-letterbox #desktop {
+  position: fixed !important;
+  left: var(--vp-x, 0px);
+  top: var(--vp-y, 0px);
+  width: var(--vp-w, 100vw);
+  height: calc(var(--vp-h, 100vh) - 45px) !important;
+}
+body.mica-letterbox #taskbar {
+  left: var(--vp-x, 0px) !important;
+  width: var(--vp-w, 100%) !important;
+  right: auto !important;
+}
+body.mica-letterbox #taskbar.pos-bottom {
+  bottom: calc(100vh - var(--vp-y, 0px) - var(--vp-h, 100vh)) !important;
+}
+body.mica-letterbox #vertical-bubble:not(.pin-topbar):not(.pin-taskbar) {
+  /* keep bubble inside viewport via JS clamp */
+}
+body.mica-letterbox #lock-screen {
+  left: var(--vp-x, 0px);
+  top: var(--vp-y, 0px);
+  width: var(--vp-w, 100vw);
+  height: var(--vp-h, 100vh);
+  right: auto;
+  bottom: auto;
+  inset: auto;
+}
+
+/* Quick menu modes */
+.qa-mode-task .qa-task-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+}
+.qa-mode-task .qa-task-tile {
+  background: rgba(255,255,255,0.06);
+  border: 1px solid var(--dock-border);
+  border-radius: 10px;
+  padding: 14px 10px;
+  text-align: center;
+  cursor: pointer;
+  font-size: 12px;
+}
+.qa-mode-task .qa-task-tile:hover { background: rgba(0,120,212,0.25); }
+.qa-mode-task .qa-task-tile.on { outline: 2px solid #0078d4; }
+.qa-mode-drop .qa-drop-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 10px;
+  padding: 4px 0;
+}
+.qa-mode-drop .qa-drop-ico {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  padding: 12px 6px;
+  border-radius: 14px;
+  cursor: pointer;
+  font-size: 11px;
+  background: rgba(255,255,255,0.05);
+}
+.qa-mode-drop .qa-drop-ico:hover { background: rgba(0,120,212,0.25); }
+.qa-mode-drop .qa-drop-ico .big { font-size: 26px; }
+.qa-mode-drop .qa-drop-ico.on { background: rgba(0,120,212,0.35); }
+
+.qa-widget[draggable="true"] { cursor: grab; }
+.qa-widget.dragging { opacity: 0.5; }
+.qa-widget.drag-over { outline: 2px dashed #0078d4; }
+
+.qa-mode-tabs {
+  display: flex;
+  gap: 4px;
+  margin-bottom: 8px;
+}
+.qa-mode-tabs button {
+  flex: 1;
+  padding: 6px 4px !important;
+  font-size: 10px !important;
+  border-radius: 6px !important;
+}
+.qa-mode-tabs button.active {
+  background: var(--text) !important;
+  color: var(--win-bg) !important;
+}
+
+
+/* Pyron 8.1 widget modes + settings */
+#quick-access.qa-mode-action { width: 240px !important; padding: 10px !important; }
+#quick-access.qa-mode-task { width: 420px !important; padding: 12px !important; }
+#quick-access.qa-mode-drop { width: 320px !important; padding: 12px 14px !important; }
+.qa-compact { padding: 6px 8px !important; margin: 0 !important; }
+.qa-compact .qa-widget-title { display: none; }
+.qa-task-row {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 8px;
+  margin-bottom: 8px;
+}
+.qa-task-tile {
+  background: rgba(255,255,255,0.06);
+  border: 1px solid var(--dock-border);
+  border-radius: 8px;
+  padding: 10px 6px;
+  text-align: center;
+  cursor: pointer;
+  font-size: 11px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+}
+.qa-task-tile.on { outline: 2px solid #0078d4; background: rgba(0,120,212,0.2); }
+.qa-task-ico { font-size: 18px; }
+.qa-task-widgets { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 8px; }
+.qa-task-chip {
+  font-size: 11px; padding: 5px 10px; border-radius: 12px;
+  background: rgba(255,255,255,0.06); border: 1px solid var(--dock-border); cursor: pointer;
+}
+.qa-task-slider { margin: 4px 0; }
+
+/* Control Centre (drop / topbar) */
+.qa-cc-section {
+  background: rgba(255,255,255,0.05);
+  border-radius: 12px;
+  padding: 10px 12px;
+  margin-bottom: 8px;
+  border: 1px solid var(--dock-border);
+}
+.qa-cc-label { font-size: 10px; text-transform: uppercase; opacity: 0.45; margin-bottom: 6px; letter-spacing: 0.04em; }
+.qa-cc-row {
+  display: flex; align-items: center; justify-content: space-between;
+  gap: 8px; padding: 6px 0; font-size: 13px;
+}
+.qa-cc-toggle {
+  min-width: 44px; padding: 4px 10px !important; font-size: 11px !important;
+  border-radius: 12px !important; background: rgba(255,255,255,0.08) !important;
+}
+.qa-cc-toggle.on { background: #0078d4 !important; color: #fff !important; border-color: #0078d4 !important; }
+.qa-cc-btn {
+  flex: 1; padding: 6px 8px !important; font-size: 11px !important; border-radius: 8px !important;
+}
+
+/* Widget Settings overlay */
+#qa-settings-panel {
+  position: fixed; inset: 0; z-index: 4000000;
+  background: rgba(0,0,0,0.35);
+  display: flex; align-items: center; justify-content: center;
+}
+.qa-settings-card {
+  width: min(380px, 92vw);
+  max-height: min(80vh, 560px);
+  overflow: auto;
+  background: var(--win-bg);
+  backdrop-filter: var(--blur);
+  border: 1px solid var(--dock-border);
+  border-radius: 14px;
+  box-shadow: var(--shadow);
+  padding: 14px 16px 16px;
+  color: var(--text);
+  scrollbar-width: none;
+}
+.qa-settings-card::-webkit-scrollbar { display: none; }
+.qa-settings-head {
+  display: flex; justify-content: space-between; align-items: center;
+  margin-bottom: 12px; font-size: 14px;
+}
+.qa-settings-x { cursor: pointer; opacity: 0.5; padding: 4px 8px; }
+.qa-settings-sec { font-size: 11px; opacity: 0.5; margin: 12px 0 6px; text-transform: uppercase; letter-spacing: 0.04em; }
+.qa-settings-modes { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 6px; }
+.qa-mode-pick {
+  padding: 8px 6px !important; font-size: 12px !important; text-align: center;
+  border-radius: 10px !important; line-height: 1.3;
+}
+.qa-mode-pick small { display: block; opacity: 0.5; font-size: 9px; margin-top: 2px; }
+.qa-mode-pick.on { background: var(--text) !important; color: var(--win-bg) !important; }
+.qa-settings-link {
+  width: 100%; margin-top: 8px; font-size: 11px !important; padding: 6px !important;
+  background: transparent !important; opacity: 0.7;
+}
+.qa-settings-row {
+  display: flex; align-items: center; gap: 6px;
+  padding: 6px 0; border-bottom: 1px solid rgba(255,255,255,0.06); font-size: 13px;
+}
+.qa-settings-row span { flex: 1; }
+.qa-ord-btn { padding: 2px 8px !important; font-size: 11px !important; }
+.qa-settings-actions {
+  display: flex; gap: 6px; margin-top: 12px;
+}
+.qa-settings-actions button { flex: 1; padding: 8px !important; font-size: 12px !important; }
+
+/* Kill broken letterbox layout rules from 8.0 that moved desktop */
+body.mica-letterbox #desktop {
+  position: relative !important;
+  left: auto !important;
+  top: auto !important;
+  width: 100vw !important;
+  height: calc(100vh - 45px) !important;
+}
+body.mica-letterbox #taskbar {
+  left: 0 !important;
+  width: 100% !important;
+}
+body.mica-letterbox #lock-screen {
+  inset: 0 !important;
+  width: auto !important;
+  height: auto !important;
+}
+
+.qa-task-stat {
+  background: rgba(255,255,255,0.04);
+  border: 1px solid var(--dock-border);
+  border-radius: 8px;
+  padding: 10px 6px;
+  text-align: center;
+  font-size: 11px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  pointer-events: none;
+}
+#quick-access { overflow: auto; scrollbar-width: none; }
+#quick-access::-webkit-scrollbar { display: none; }
+
+/* Mac-like topbar extras */
+#topbar-extras {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex: 1;
+  min-width: 0;
+  height: 100%;
+  margin-right: 8px;
+  pointer-events: auto;
+}
+.topbar-left, .topbar-right {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  height: 100%;
+}
+.topbar-brand {
+  font-weight: 600;
+  font-size: 12px;
+  cursor: pointer;
+  padding: 0 6px;
+}
+.topbar-brand:hover { opacity: 0.8; }
+.topbar-menu-item {
+  font-size: 12px;
+  cursor: pointer;
+  padding: 2px 6px;
+  border-radius: 4px;
+  opacity: 0.85;
+}
+.topbar-menu-item:hover { background: rgba(255,255,255,0.12); }
+.topbar-status {
+  font-size: 12px;
+  cursor: pointer;
+  padding: 0 4px;
+}
+.topbar-clock {
+  font-size: 12px;
+  font-variant-numeric: tabular-nums;
+  min-width: 64px;
+  text-align: right;
+  padding: 0 4px;
+}
+#vertical-bubble.pin-topbar {
+  justify-content: flex-start !important;
+}
+#vertical-bubble.pin-topbar .bubble-btn {
+  flex-shrink: 0;
+}
+
+/* Editor paint isolation — reduce WebEngine flicker */
+.win-content pre[id^="re_hi_"],
+.win-content textarea[id^="re_text_"] {
+  contain: layout style;
+  will-change: contents;
+}
+
+/* 8.4 stability + topbar dropdowns + clean QA */
+#quick-access {
+  animation: none !important;
+  backdrop-filter: blur(16px);
+}
+.qa-status-strip {
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr;
+  gap: 6px;
+  margin-bottom: 8px;
+}
+.qa-st {
+  font-size: 11px;
+  padding: 6px 4px;
+  text-align: center;
+  background: rgba(255,255,255,0.05);
+  border-radius: 8px;
+  border: 1px solid var(--dock-border);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.qa-tile-lab { font-size: 9px; opacity: 0.65; }
+.qa-widget-grid { display: grid; grid-template-columns: 1fr 1fr 1fr 1fr; gap: 6px; }
+.qa-tile { display: flex; flex-direction: column; align-items: center; gap: 2px; padding: 8px 4px; border-radius: 10px; cursor: pointer; background: rgba(255,255,255,0.04); }
+.qa-tile:hover { background: rgba(0,120,212,0.2); }
+.qa-tile-ico { font-size: 18px; }
+
+.topbar-dd { position: relative; display: inline-flex; align-items: center; }
+.topbar-dd-menu {
+  display: none;
+  position: absolute;
+  top: 100%;
+  left: 0;
+  min-width: 180px;
+  background: var(--win-bg);
+  border: 1px solid var(--dock-border);
+  border-radius: 8px;
+  box-shadow: var(--shadow);
+  padding: 4px 0;
+  z-index: 100100;
+  margin-top: 2px;
+}
+.topbar-dd-menu.open { display: block; }
+.topbar-dd-item {
+  padding: 7px 12px;
+  font-size: 12px;
+  cursor: pointer;
+  white-space: nowrap;
+}
+.topbar-dd-item:hover { background: rgba(0,120,212,0.22); }
+
+/* Explorer list: smooth opacity, no layout jump */
+[id^="ex_list_"] {
+  transition: opacity 0.08s linear;
+  contain: layout style;
+}
+
+/* Prefer solid fills over heavy blur on chrome that updates often */
+#taskbar, #vertical-bubble.pin-topbar {
+  backdrop-filter: blur(12px);
+}
+.window .win-content {
+  contain: layout style;
+}
+
+/* 8.6 App Dock — overflow visible so icons magnify without clipping */
+#taskbar.app-dock {
+  overflow: visible !important;
+}
+#taskbar.app-dock #tb-apps {
+  overflow: visible !important;
+}
+#taskbar.app-dock.pos-bottom,
+#taskbar.app-dock.pos-top {
+  width: auto !important;
+  left: 50% !important;
+  right: auto !important;
+  transform: translateX(-50%);
+  border-radius: 18px !important;
+  padding: 8px 16px 14px !important;
+  height: auto !important;
+  min-height: 52px;
+  bottom: 12px !important;
+  gap: 6px;
+  border: 1px solid var(--dock-border);
+  box-shadow: 0 8px 32px rgba(0,0,0,0.28);
+  overflow: visible !important;
+}
+#taskbar.app-dock.pos-top {
+  top: 12px !important;
+  bottom: auto !important;
+  padding: 14px 16px 8px !important;
+}
+#taskbar.app-dock.pos-left,
+#taskbar.app-dock.pos-right {
+  width: auto !important;
+  min-width: 56px;
+  height: auto !important;
+  max-height: 85vh;
+  top: 50% !important;
+  transform: translateY(-50%);
+  border-radius: 18px !important;
+  padding: 14px 10px !important;
+  gap: 8px;
+  box-shadow: 0 8px 32px rgba(0,0,0,0.28);
+  overflow: visible !important;
+}
+#taskbar.app-dock.pos-left { left: 12px !important; }
+#taskbar.app-dock.pos-right { right: 12px !important; left: auto !important; }
+
+/* Hide clock in dock mode — cleaner mac-style dock */
+#taskbar.app-dock .tb-sys,
+#taskbar.app-dock #tb-clock {
+  display: none !important;
+}
+
+#taskbar.app-dock .tb-app-btn,
+#taskbar.app-dock .tb-start-btn,
+#taskbar.app-dock #tb-taskview,
+#taskbar.app-dock #tb-bubble-pin {
+  transition: transform 0.12s cubic-bezier(0.2, 0.8, 0.2, 1);
+  transform-origin: center bottom;
+  will-change: transform;
+  overflow: visible;
+  width: 42px;
+  height: 42px;
+  border-radius: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 20px;
+  flex-shrink: 0;
+}
+#taskbar.app-dock.pos-left .tb-app-btn,
+#taskbar.app-dock.pos-right .tb-app-btn,
+#taskbar.app-dock.pos-left .tb-start-btn,
+#taskbar.app-dock.pos-right .tb-start-btn,
+#taskbar.app-dock.pos-left #tb-taskview,
+#taskbar.app-dock.pos-right #tb-taskview {
+  transform-origin: center center;
+}
+#taskbar.app-dock .tb-start-btn {
+  font-size: 22px;
+  background: transparent;
+  border: none;
+}
+#taskbar.app-dock .tb-start-btn span { display: none !important; }
+
+
+/* Start menu: centered only in dock mode (see .app-dock-on) */
+body.app-dock-on #start-menu.sm-centered {
+  left: 50% !important;
+  right: auto !important;
+  transform: translateX(-50%);
+}
+body:not(.app-dock-on) #start-menu {
+  /* classic taskbar placement handled by JS */
+}
+
+/* Task View */
+#task-view {
+  position: fixed; inset: 0; z-index: 500000;
+  display: flex; align-items: center; justify-content: center;
+}
+#task-view .tv-backdrop {
+  position: absolute; inset: 0;
+  background: rgba(0,0,0,0.55);
+  backdrop-filter: blur(12px);
+}
+.tv-panel {
+  position: relative;
+  width: min(900px, 92vw);
+  max-height: 80vh;
+  overflow: auto;
+  background: var(--win-bg);
+  border: 1px solid var(--dock-border);
+  border-radius: 16px;
+  padding: 16px;
+  box-shadow: var(--shadow);
+  color: var(--text);
+}
+.tv-head {
+  display: flex; justify-content: space-between; align-items: center;
+  margin-bottom: 14px;
+}
+.tv-spaces {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+  gap: 12px;
+}
+.tv-space {
+  background: rgba(255,255,255,0.06);
+  border: 2px solid transparent;
+  border-radius: 12px;
+  padding: 10px;
+  min-height: 100px;
+  cursor: pointer;
+}
+.tv-space.active { border-color: #0078d4; background: rgba(0,120,212,0.12); }
+.tv-space:hover { background: rgba(255,255,255,0.1); }
+.tv-space-label { font-size: 12px; opacity: 0.7; margin-bottom: 8px; }
+.tv-win {
+  font-size: 12px;
+  padding: 6px 8px;
+  margin: 4px 0;
+  background: rgba(0,0,0,0.2);
+  border-radius: 6px;
+  cursor: pointer;
+}
+.tv-win:hover { background: rgba(0,120,212,0.3); }
+.tv-hint { font-size: 11px; opacity: 0.45; margin-top: 12px; text-align: center; }
+
+/* Quick access solid */
+#quick-access {
+  animation: none !important;
+}
+
+/* Task View button — CSS grid icon (not broken emoji) */
+#tb-taskview {
+  cursor: pointer;
+  width: 36px;
+  height: 36px;
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  position: relative;
+  font-size: 0; /* hide any text */
+}
+#tb-taskview::before {
+  content: '';
+  display: block;
+  width: 18px;
+  height: 14px;
+  border: 2px solid currentColor;
+  border-radius: 2px;
+  box-shadow: 6px -4px 0 -2px currentColor, 6px 4px 0 -2px currentColor;
+  opacity: 0.9;
+}
+#tb-taskview:hover { background: rgba(255,255,255,0.12); }
+#taskbar.app-dock #tb-taskview {
+  width: 42px;
+  height: 42px;
+  border-radius: 12px;
+}
+
+/* Desktop switch slide */
+.window.space-out-left {
+  transition: transform 0.28s cubic-bezier(0.22, 1, 0.36, 1), opacity 0.22s ease !important;
+  transform: translateX(-48px);
+  opacity: 0;
+  pointer-events: none;
+}
+.window.space-out-right {
+  transition: transform 0.28s cubic-bezier(0.22, 1, 0.36, 1), opacity 0.22s ease !important;
+  transform: translateX(48px);
+  opacity: 0;
+  pointer-events: none;
+}
+.window.space-in-left {
+  animation: spaceInLeft 0.28s cubic-bezier(0.22, 1, 0.36, 1) forwards;
+}
+.window.space-in-right {
+  animation: spaceInRight 0.28s cubic-bezier(0.22, 1, 0.36, 1) forwards;
+}
+@keyframes spaceInLeft {
+  from { transform: translateX(48px); opacity: 0; }
+  to { transform: translateX(0); opacity: 1; }
+}
+@keyframes spaceInRight {
+  from { transform: translateX(-48px); opacity: 0; }
+  to { transform: translateX(0); opacity: 1; }
+}
+
+/* ── Pyron 8.8 layout / dock / chrome ── */
+#taskbar.app-dock {
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  gap: 10px !important;
+}
+#taskbar.app-dock #tb-apps {
+  display: flex;
+  align-items: flex-end;
+  gap: 10px !important;
+  overflow: visible !important;
+}
+#taskbar.app-dock.pos-left,
+#taskbar.app-dock.pos-right {
+  align-items: center;
+  flex-direction: column;
+  gap: 10px !important;
+}
+#taskbar.app-dock.pos-left #tb-apps,
+#taskbar.app-dock.pos-right #tb-apps {
+  flex-direction: column;
+  align-items: center;
+  gap: 10px !important;
+}
+
+/* Start button = same square as app icons in dock */
+#taskbar.app-dock .tb-start-btn {
+  width: 42px !important;
+  height: 42px !important;
+  min-width: 42px;
+  border-radius: 12px !important;
+  display: flex !important;
+  align-items: center;
+  justify-content: center;
+  font-size: 20px !important;
+  background: rgba(255,255,255,0.08);
+  border: 1px solid var(--dock-border);
+  padding: 0 !important;
+  box-sizing: border-box;
+}
+#taskbar.app-dock .tb-start-btn span { display: none !important; }
+
+#taskbar.app-dock .tb-app-btn,
+#taskbar.app-dock #tb-taskview,
+#taskbar.app-dock #tb-bubble-pin {
+  width: 42px !important;
+  height: 42px !important;
+  margin: 0 !important;
+  flex-shrink: 0;
+}
+
+/* Dock autohide when maximized */
+/* Autohide ONLY in App Dock mode — never classic taskbar */
+#taskbar.app-dock.dock-autohide.pos-bottom {
+  transform: translateX(-50%) translateY(calc(100% - 6px)) !important;
+  opacity: 0.2;
+  transition: transform 0.25s ease, opacity 0.25s ease;
+}
+#taskbar.app-dock.dock-autohide.pos-bottom:hover,
+#taskbar.app-dock.dock-autohide.pos-bottom.show-hover {
+  transform: translateX(-50%) translateY(0) !important;
+  opacity: 1;
+}
+#taskbar.app-dock.dock-autohide.pos-top {
+  transform: translateX(-50%) translateY(calc(-100% + 6px)) !important;
+  opacity: 0.2;
+}
+#taskbar.app-dock.dock-autohide.pos-top:hover {
+  transform: translateX(-50%) translateY(0) !important;
+  opacity: 1;
+}
+#taskbar.app-dock.dock-autohide.pos-left {
+  transform: translateY(-50%) translateX(calc(-100% + 6px)) !important;
+  opacity: 0.2;
+}
+#taskbar.app-dock.dock-autohide.pos-left:hover {
+  transform: translateY(-50%) translateX(0) !important;
+  opacity: 1;
+}
+#taskbar.app-dock.dock-autohide.pos-right {
+  transform: translateY(-50%) translateX(calc(100% - 6px)) !important;
+  opacity: 0.2;
+}
+#taskbar.app-dock.dock-autohide.pos-right:hover {
+  transform: translateY(-50%) translateX(0) !important;
+  opacity: 1;
+}
+
+/* Fullscreen overlay: slide chrome away, do not display:none (recoverable) */
+body.mica-true-fs #taskbar.chrome-hidden,
+body.mica-true-fs #vertical-bubble.chrome-hidden {
+  transform: translateY(120%) !important;
+  opacity: 0 !important;
+  pointer-events: none !important;
+  visibility: hidden !important;
+}
+body.mica-true-fs #quick-access,
+body.mica-true-fs #start-menu { display: none !important; }
+body.mica-true-fs .window.true-fullscreen {
+  position: fixed !important;
+  left: 0 !important;
+  top: 0 !important;
+  width: 100vw !important;
+  height: 100vh !important;
+  border-radius: 0 !important;
+  z-index: 200000 !important;
+  opacity: 1 !important;
+  display: flex !important;
+}
+/* fs integrated into max-btn (double-click) */
+.mica-fs-btn { display: none !important; } /* legacy injector disabled */
+
+/* Top bar layout — push desktop content */
+body.bubble-pin-topbar #desktop,
+body.layout-topbar #desktop {
+  padding-top: 32px !important;
+  box-sizing: border-box;
+}
+body.bubble-pin-topbar .window.maximized {
+  /* top handled in JS */
+}
+
+/* Side dock optimization */
+#taskbar.app-dock.pos-left .tb-sys,
+#taskbar.app-dock.pos-right .tb-sys { display: none !important; }
+
+.tb-app-btn.pinned::after {
+  content: '';
+  position: absolute;
+  bottom: 2px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 4px; height: 4px;
+  border-radius: 50%;
+  background: rgba(255,255,255,0.55);
+}
+#taskbar.pos-left .tb-app-btn.pinned::after,
+#taskbar.pos-right .tb-app-btn.pinned::after {
+  bottom: auto; left: auto; right: 2px; top: 50%; transform: translateY(-50%);
+}
+
+.chrome-hidden { /* overlay hide via mica-true-fs rules — do not display:none */ }
+
+/* Equal dock spacing when not app-dock (classic) */
+#taskbar #tb-apps { display: flex; gap: 4px; align-items: center; }
+
+/* ── Pyron 8.9 dock spacing (fixed equal slots) ── */
+#taskbar.app-dock {
+  display: flex !important;
+  align-items: flex-end !important;
+  justify-content: center !important;
+  gap: 12px !important;
+  padding: 10px 18px 14px !important;
+}
+#taskbar.app-dock.pos-left,
+#taskbar.app-dock.pos-right {
+  align-items: center !important;
+  flex-direction: column !important;
+  padding: 18px 10px !important;
+  gap: 12px !important;
+}
+#taskbar.app-dock #tb-apps {
+  display: flex !important;
+  flex-direction: inherit;
+  align-items: inherit;
+  gap: 12px !important;
+  margin: 0 !important;
+  padding: 0 !important;
+  overflow: visible !important;
+}
+#taskbar.app-dock .tb-start-btn,
+#taskbar.app-dock .tb-app-btn,
+#taskbar.app-dock #tb-taskview,
+#taskbar.app-dock #tb-bubble-pin,
+#taskbar.app-dock .tb-fixed-slot {
+  width: 44px !important;
+  height: 44px !important;
+  min-width: 44px !important;
+  min-height: 44px !important;
+  margin: 0 !important;
+  padding: 0 !important;
+  border-radius: 12px !important;
+  box-sizing: border-box !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  background: rgba(255,255,255,0.08) !important;
+  border: 1px solid rgba(255,255,255,0.12) !important;
+  flex-shrink: 0 !important;
+  font-size: 20px !important;
+  line-height: 1 !important;
+  position: relative;
+}
+#taskbar.app-dock .tb-start-btn {
+  background: rgba(255,255,255,0.12) !important;
+}
+#taskbar.app-dock .tb-start-btn span { display: none !important; }
+
+/* Task view icon squares */
+#tb-taskview::before {
+  content: '';
+  display: block;
+  width: 16px;
+  height: 12px;
+  border: 2px solid currentColor;
+  border-radius: 2px;
+  box-shadow: 5px -3px 0 -1px currentColor;
+  opacity: 0.9;
+}
+
+/* Classic taskbar equal-ish gaps */
+#taskbar:not(.app-dock) #tb-apps {
+  display: flex;
+  gap: 6px;
+  align-items: center;
+}
+#taskbar:not(.app-dock) .tb-app-btn,
+#taskbar:not(.app-dock) #tb-taskview {
+  width: 36px;
+  height: 36px;
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: transparent;
+  border: 1px solid transparent;
+}
+#taskbar:not(.app-dock) .tb-app-btn:hover,
+#taskbar:not(.app-dock) #tb-taskview:hover {
+  background: rgba(255,255,255,0.1);
+  border-color: rgba(255,255,255,0.08);
+}
+
+/* Solid windows always */
+.window,
+.window.maximized,
+.window.true-fullscreen,
+.window.is-dragging {
+  opacity: 1 !important;
+}
+.window .win-content {
+  opacity: 1 !important;
+}
+
+/* Traffic lights: only 3, ordered close min max (mac) */
+.win-controls { display: flex; gap: 8px; align-items: center; flex-direction: row; }
+.win-btn {
+  width: 12px !important;
+  height: 12px !important;
+  border-radius: 50% !important;
+  padding: 0 !important;
+  border: none !important;
+  flex-shrink: 0;
+}
+
+/* ── Pyron 9.0 stable ── */
+.window,
+.window * {
+  /* content can be transparent; chrome stays solid */
+}
+.window {
+  opacity: 1 !important;
+  background: var(--win-bg) !important;
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
+}
+.window .win-header {
+  background: var(--win-bg) !important;
+  opacity: 1 !important;
+}
+.window .win-content {
+  background: var(--win-bg);
+  opacity: 1 !important;
+}
+
+/* Traffic lights: min · max · fs · close (red right) */
+.win-controls {
+  display: flex !important;
+  flex-direction: row !important;
+  gap: 8px !important;
+  align-items: center !important;
+}
+.win-btn.min-btn { background: #ffbd2e !important; order: 1; }
+.win-btn.max-btn { background: #28ca42 !important; order: 2; }
+.win-btn.fs-btn  { background: #c084fc !important; order: 3; width: 12px !important; height: 12px !important; border-radius: 50% !important; }
+.win-btn.close-btn { background: #ff5f56 !important; order: 4; }
+
+/* Maximized fills viewport when dock autohides */
+.window.maximized.dock-fill {
+  left: 0 !important;
+  top: 0 !important;
+  width: 100vw !important;
+  height: 100vh !important;
+  border-radius: 0 !important;
+}
+body.bubble-pin-topbar .window.maximized.dock-fill {
+  top: 28px !important;
+  height: calc(100vh - 28px) !important;
+}
+
+/* Dock magnification needs overflow + padding room */
+#taskbar.app-dock {
+  overflow: visible !important;
+  padding-left: 28px !important;
+  padding-right: 28px !important;
+  padding-bottom: 18px !important;
+}
+#taskbar.app-dock.pos-top {
+  padding-top: 18px !important;
+  padding-bottom: 10px !important;
+}
+#taskbar.app-dock.pos-left,
+#taskbar.app-dock.pos-right {
+  padding-top: 28px !important;
+  padding-bottom: 28px !important;
+  padding-left: 14px !important;
+  padding-right: 14px !important;
+}
+#taskbar.app-dock .tb-app-btn,
+#taskbar.app-dock .tb-start-btn,
+#taskbar.app-dock #tb-taskview,
+#taskbar.app-dock #tb-bubble-pin {
+  transition: transform 0.12s cubic-bezier(0.2, 0.8, 0.2, 1), margin 0.12s cubic-bezier(0.2, 0.8, 0.2, 1) !important;
+  will-change: transform, margin;
+}
+
+/* Autohide dock: no residual layout gap — it is position:fixed */
+#taskbar.dock-autohide {
+  pointer-events: auto;
+}
+
+body.app-dock-on #desktop {
+  width: 100vw !important;
+  height: 100vh !important;
+  margin: 0 !important;
+}
+
+/* ══════════════════════════════════════════════════════════════════════
+   Pyron 9.1 — layout isolation (classic taskbar vs App Dock vs FS)
+   CSS classes own desktop geometry so JS/display-layout cannot leave a
+   45px hole, and dock transforms never leak into classic taskbar mode.
+   ══════════════════════════════════════════════════════════════════════ */
+
+#mica-fs-layer {
+  position: fixed;
+  inset: 0;
+  z-index: 400000;
+  pointer-events: none;
+  overflow: visible;
+}
+#mica-fs-layer .window {
+  pointer-events: auto;
+}
+
+/* Maximized = fill #desktop only (never 100vh — that covers classic taskbar) */
+.window.maximized {
+  left: 0 !important;
+  top: 0 !important;
+  right: auto !important;
+  bottom: auto !important;
+  width: 100% !important;
+  height: 100% !important;
+  border-radius: 0 !important;
+  position: absolute !important;
+  max-width: none !important;
+  max-height: none !important;
+}
+.window.maximized.dock-fill {
+  /* legacy class: still fill the desktop, not the viewport */
+  left: 0 !important;
+  top: 0 !important;
+  width: 100% !important;
+  height: 100% !important;
+}
+
+/* True fullscreen lives on #mica-fs-layer / body, above all chrome */
+.window.true-fullscreen {
+  position: fixed !important;
+  left: 0 !important;
+  top: 0 !important;
+  width: 100vw !important;
+  height: 100vh !important;
+  border-radius: 0 !important;
+  z-index: 400000 !important;
+  opacity: 1 !important;
+  display: flex !important;
+  transform: none !important;
+  visibility: visible !important;
+  max-width: none !important;
+  max-height: none !important;
+}
+
+/* ── Classic taskbar: always a 45px strip, never dock transforms ── */
+html body.tb-pos-bottom:not(.app-dock-on) #desktop {
+  width: 100vw !important;
+  height: calc(100vh - 45px) !important;
+  margin: 0 !important;
+  padding-top: 0 !important;
+  left: auto !important;
+  top: auto !important;
+}
+html body.tb-pos-top:not(.app-dock-on) #desktop {
+  width: 100vw !important;
+  height: calc(100vh - 45px) !important;
+  margin: 45px 0 0 0 !important;
+  padding-top: 0 !important;
+  left: auto !important;
+  top: auto !important;
+}
+html body.tb-pos-left:not(.app-dock-on) #desktop {
+  width: calc(100vw - 45px) !important;
+  height: 100vh !important;
+  margin: 0 0 0 45px !important;
+  padding-top: 0 !important;
+  left: auto !important;
+  top: auto !important;
+}
+html body.tb-pos-right:not(.app-dock-on) #desktop {
+  width: calc(100vw - 45px) !important;
+  height: 100vh !important;
+  margin: 0 45px 0 0 !important;
+  padding-top: 0 !important;
+  left: auto !important;
+  top: auto !important;
+}
+
+/* Classic + top menu bar: one 28px inset, not padding+margin stacked */
+html body.tb-pos-bottom:not(.app-dock-on).bubble-pin-topbar #desktop,
+html body.tb-pos-bottom:not(.app-dock-on).layout-topbar #desktop {
+  height: calc(100vh - 45px - 28px) !important;
+  margin: 28px 0 0 0 !important;
+  padding-top: 0 !important;
+}
+html body.tb-pos-top:not(.app-dock-on).bubble-pin-topbar #desktop,
+html body.tb-pos-top:not(.app-dock-on).layout-topbar #desktop {
+  height: calc(100vh - 45px - 28px) !important;
+  margin: 73px 0 0 0 !important;
+  padding-top: 0 !important;
+}
+html body.tb-pos-left:not(.app-dock-on).bubble-pin-topbar #desktop,
+html body.tb-pos-right:not(.app-dock-on).bubble-pin-topbar #desktop,
+html body.tb-pos-left:not(.app-dock-on).layout-topbar #desktop,
+html body.tb-pos-right:not(.app-dock-on).layout-topbar #desktop {
+  height: calc(100vh - 28px) !important;
+  margin-top: 28px !important;
+  padding-top: 0 !important;
+}
+
+/* ── App Dock: desktop is always the full viewport. Dock overlays. ── */
+html body.app-dock-on #desktop,
+html body.app-dock-on.mica-letterbox #desktop,
+html body.app-dock-on.tb-pos-bottom #desktop,
+html body.app-dock-on.tb-pos-top #desktop,
+html body.app-dock-on.tb-pos-left #desktop,
+html body.app-dock-on.tb-pos-right #desktop {
+  width: 100vw !important;
+  height: 100vh !important;
+  margin: 0 !important;
+  padding-top: 0 !important;
+  left: auto !important;
+  top: auto !important;
+}
+html body.app-dock-on.bubble-pin-topbar #desktop,
+html body.app-dock-on.layout-topbar #desktop {
+  height: calc(100vh - 28px) !important;
+  margin: 28px 0 0 0 !important;
+  padding-top: 0 !important;
+}
+
+/* Kill the old stacked topbar padding that created a second gap */
+html body.bubble-pin-topbar #desktop,
+html body.layout-topbar #desktop {
+  padding-top: 0 !important;
+}
+
+/* Classic taskbar: no dock transform, no autohide slide, no centered apps */
+#taskbar:not(.app-dock) {
+  transform: none !important;
+  opacity: 1;
+  visibility: visible;
+}
+#taskbar:not(.app-dock) #tb-apps {
+  justify-content: flex-start !important;
+  align-items: center;
+}
+#taskbar:not(.app-dock).pos-left #tb-apps,
+#taskbar:not(.app-dock).pos-right #tb-apps {
+  justify-content: flex-start !important;
+}
+
+/* Don't animate width/left/height on classic (looks like dock morphing) */
+#taskbar:not(.app-dock) {
+  transition: background 0.2s, box-shadow 0.2s, opacity 0.2s !important;
+}
+#taskbar.app-dock {
+  transition: transform 0.25s ease, opacity 0.25s ease !important;
+}
+
+/* Autohide is App Dock only — already gated, reinforce */
+#taskbar:not(.app-dock).dock-autohide {
+  transform: none !important;
+  opacity: 1 !important;
+}
+
+/* Fullscreen: hide chrome without display:none so it always comes back */
+body.mica-true-fs #taskbar,
+body.mica-true-fs #vertical-bubble {
+  opacity: 0 !important;
+  visibility: hidden !important;
+  pointer-events: none !important;
+}
+body.mica-true-fs #taskbar:not(.app-dock) {
+  transform: none !important;
+}
+body.mica-true-fs #taskbar.app-dock.pos-bottom,
+body.mica-true-fs #taskbar.app-dock.pos-top {
+  transform: translateX(-50%) translateY(140%) !important;
+}
+body.mica-true-fs #taskbar.app-dock.pos-left,
+body.mica-true-fs #taskbar.app-dock.pos-right {
+  transform: translateY(-50%) translateX(-140%) !important;
+}
+body.mica-true-fs #taskbar.app-dock.pos-right {
+  transform: translateY(-50%) translateX(140%) !important;
+}
+body.mica-true-fs #quick-access,
+body.mica-true-fs #start-menu,
+body.mica-true-fs #task-view { display: none !important; }
+
+/* Letterbox must not punch a 45px hole in dock mode */
+html body.app-dock-on.mica-letterbox #desktop {
+  height: 100vh !important;
+  width: 100vw !important;
+  position: relative !important;
+}
+
+
+
+/* ═══════════════ Pyron 9.2 — Quick menu (stable, no widgets) ═══════════════ */
+#quick-access {
+  position: fixed !important;
+  top: 56px;
+  right: 16px;
+  left: auto;
+  bottom: auto;
+  width: 260px;
+  max-width: calc(100vw - 16px);
+  max-height: min(70vh, 400px);
+  background: var(--win-bg) !important;
+  backdrop-filter: blur(20px) saturate(1.2);
+  -webkit-backdrop-filter: blur(20px) saturate(1.2);
+  border-radius: 16px;
+  border: 1px solid var(--dock-border);
+  box-shadow: 0 16px 48px rgba(0,0,0,0.28), 0 2px 8px rgba(0,0,0,0.12);
+  display: none;
+  flex-direction: column;
+  padding: 0;
+  z-index: 99999;
+  overflow: hidden;
+  color: var(--text);
+  opacity: 0;
+  transform: translateY(6px) scale(0.98);
+  transform-origin: top right;
+  transition: opacity 0.16s ease, transform 0.18s cubic-bezier(0.2, 0.8, 0.2, 1);
+  will-change: opacity, transform;
+}
+#quick-access.open {
+  display: flex !important;
+  opacity: 1 !important;
+  transform: translateY(0) scale(1) !important;
+}
+#quick-access.qa-mode-task { transform-origin: bottom right; }
+#quick-access.qa-mode-action { transform-origin: center left; }
+#quick-access.qa-pin-floating.qa-mode-action { transform-origin: center right; }
+
+.qa-chrome {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 14px 8px;
+  flex-shrink: 0;
+}
+.qa-title {
+  font-size: 13px;
+  font-weight: 600;
+  letter-spacing: 0.2px;
+}
+.qa-close {
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  border: none;
+  background: rgba(128,128,128,0.18);
+  color: var(--text);
+  cursor: pointer;
+  font-size: 11px;
+  line-height: 1;
+  padding: 0;
+  opacity: 0.7;
+}
+.qa-close:hover { opacity: 1; background: rgba(255,95,86,0.35); }
+
+.qa-body {
+  padding: 4px 14px 14px;
+  overflow-y: auto;
+  overflow-x: hidden;
+  scrollbar-width: none;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.qa-body::-webkit-scrollbar { display: none; }
+
+.qa-head-row, .qa-task-head, .qa-cc-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+.qa-clock-block, .qa-cc-clock, .qa-task-clock {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.qa-task-clock { flex-direction: row; align-items: baseline; gap: 8px; }
+.qa-clock-big {
+  font-size: 22px;
+  font-weight: 600;
+  letter-spacing: 0.5px;
+  line-height: 1.1;
+}
+.qa-clock-date, .qa-muted { font-size: 11px; opacity: 0.55; }
+.qa-bat-pill, .qa-cc-bat {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 10px;
+  border-radius: 999px;
+  background: rgba(128,128,128,0.14);
+  border: 1px solid var(--dock-border);
+  font-size: 12px;
+  font-weight: 600;
+  white-space: nowrap;
+}
+.qa-bat-ico { font-size: 13px; }
+
+.qa-slider-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 4px 0;
+}
+.qa-slider-row .qa-ico { width: 18px; text-align: center; flex-shrink: 0; font-size: 14px; }
+.qa-slider-row .qa-val { width: 38px; text-align: right; font-size: 11px; flex-shrink: 0; opacity: 0.85; }
+.qa-slider-row input[type=range],
+.qa-slider-block input[type=range],
+.qa-cc-card input[type=range] {
+  flex: 1;
+  width: 100%;
+  height: 6px;
+  -webkit-appearance: none;
+  appearance: none;
+  background: rgba(128,128,128,0.25);
+  border-radius: 999px;
+  outline: none;
+  border: none;
+  margin: 0;
+}
+.qa-slider-row input[type=range]::-webkit-slider-thumb,
+.qa-slider-block input[type=range]::-webkit-slider-thumb,
+.qa-cc-card input[type=range]::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  width: 16px; height: 16px;
+  border-radius: 50%;
+  background: #f5f5f5;
+  border: 1px solid rgba(0,0,0,0.15);
+  box-shadow: 0 1px 4px rgba(0,0,0,0.25);
+  cursor: pointer;
+}
+body.theme-dark .qa-slider-row input[type=range]::-webkit-slider-thumb,
+body.theme-dark .qa-slider-block input[type=range]::-webkit-slider-thumb,
+body.theme-dark .qa-cc-card input[type=range]::-webkit-slider-thumb,
+body.theme-obsidian .qa-slider-row input[type=range]::-webkit-slider-thumb {
+  background: #e8e8ec;
+}
+
+.qa-action-row {
+  display: flex;
+  gap: 8px;
+  margin-top: 2px;
+}
+.qa-mini-btn {
+  flex: 1;
+  padding: 8px 10px !important;
+  font-size: 12px !important;
+  border-radius: 10px !important;
+  background: rgba(128,128,128,0.12) !important;
+  border: 1px solid var(--dock-border) !important;
+  color: var(--text) !important;
+  cursor: pointer;
+}
+.qa-mini-btn:hover { background: rgba(128,128,128,0.22) !important; }
+
+/* Task mode — Windows quick settings */
+#quick-access.qa-mode-task {
+  width: 360px !important;
+  max-height: 300px !important;
+  border-radius: 12px;
+}
+#quick-access.qa-mode-task .qa-body { gap: 12px; padding-bottom: 12px; }
+.qa-task-sliders { display: flex; flex-direction: column; gap: 12px; }
+.qa-slider-block { display: flex; flex-direction: column; gap: 6px; }
+.qa-slider-label {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 12px;
+  opacity: 0.9;
+}
+.qa-task-tiles {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 8px;
+}
+.qa-task-tile {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 12px 6px;
+  border-radius: 10px;
+  background: rgba(128,128,128,0.12);
+  border: 1px solid var(--dock-border);
+  color: var(--text);
+  cursor: pointer;
+  font-size: 11px;
+}
+.qa-task-tile span:first-child { font-size: 18px; }
+.qa-task-tile:hover { background: rgba(0,120,212,0.2); border-color: rgba(0,120,212,0.35); }
+
+/* Drop mode — macOS Control Centre */
+#quick-access.qa-mode-drop {
+  width: 320px !important;
+  max-height: min(72vh, 460px) !important;
+  border-radius: 18px;
+  background: rgba(40,40,44,0.82) !important;
+}
+body:not(.theme-dark):not(.theme-obsidian):not(.theme-nova) #quick-access.qa-mode-drop {
+  background: rgba(255,255,255,0.78) !important;
+}
+#quick-access.qa-mode-drop .qa-body { gap: 12px; }
+.qa-cc-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+}
+.qa-cc-card {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  justify-content: center;
+  gap: 8px;
+  min-height: 72px;
+  padding: 12px;
+  border-radius: 16px;
+  background: rgba(128,128,128,0.16);
+  border: 1px solid rgba(255,255,255,0.08);
+  color: var(--text);
+  cursor: pointer;
+  font-size: 12px;
+  text-align: left;
+}
+.qa-cc-card.qa-cc-wide { grid-column: 1 / -1; cursor: default; }
+.qa-cc-card:not(.qa-cc-wide):hover { background: rgba(128,128,128,0.28); }
+.qa-cc-ico { font-size: 20px; }
+.qa-cc-top { margin-bottom: 2px; }
+
+/* Action mode compact */
+#quick-access.qa-mode-action {
+  width: 260px !important;
+  border-radius: 14px;
+}
+#quick-access.qa-mode-action .qa-clock-big { font-size: 20px; }
+
+/* Hide legacy widget chrome if any leftover */
+#qa-edit-panel, #qa-settings-panel, .qa-widgets-legacy { display: none !important; }
+
+
+/* ═══════════════ Pyron 9.3 — Liquid dock · Mission Control · Setup · Perf ═══════════════ */
+
+/* Hide quick-menu pin from App Dock — Start + Task View are the fixed slots */
+#taskbar.app-dock #tb-bubble-pin,
+#taskbar.app-dock .tb-sys,
+#taskbar.app-dock #tb-clock {
+  display: none !important;
+}
+
+/* Liquid glassy dock */
+#taskbar.app-dock {
+  background: linear-gradient(180deg, rgba(255,255,255,0.18) 0%, rgba(255,255,255,0.06) 100%) !important;
+  backdrop-filter: blur(28px) saturate(1.4) !important;
+  -webkit-backdrop-filter: blur(28px) saturate(1.4) !important;
+  border: 1px solid rgba(255,255,255,0.22) !important;
+  box-shadow:
+    0 8px 32px rgba(0,0,0,0.28),
+    inset 0 1px 0 rgba(255,255,255,0.25),
+    inset 0 -1px 0 rgba(0,0,0,0.08) !important;
+  border-radius: 22px !important;
+  padding: 10px 16px 14px !important;
+  gap: 10px !important;
+}
+body.theme-dark #taskbar.app-dock,
+body.theme-obsidian #taskbar.app-dock {
+  background: linear-gradient(180deg, rgba(255,255,255,0.12) 0%, rgba(20,20,24,0.55) 100%) !important;
+  border-color: rgba(255,255,255,0.14) !important;
+}
+body.theme-nova #taskbar.app-dock {
+  background: linear-gradient(180deg, rgba(200,150,255,0.2) 0%, rgba(15,12,41,0.55) 100%) !important;
+  border-color: rgba(200,150,255,0.28) !important;
+}
+
+/* Fluid icon shapes */
+#taskbar.app-dock .tb-start-btn,
+#taskbar.app-dock .tb-app-btn,
+#taskbar.app-dock #tb-taskview,
+#taskbar.app-dock .tb-fixed-slot {
+  width: 46px !important;
+  height: 46px !important;
+  min-width: 46px !important;
+  min-height: 46px !important;
+  border-radius: 16px !important;
+  background: rgba(255,255,255,0.12) !important;
+  border: 1px solid rgba(255,255,255,0.14) !important;
+  box-shadow: inset 0 1px 0 rgba(255,255,255,0.2);
+  transition: transform 0.14s cubic-bezier(0.2, 0.9, 0.2, 1),
+              background 0.18s ease, box-shadow 0.18s ease, margin 0.14s ease !important;
+}
+#taskbar.app-dock .tb-start-btn {
+  background: rgba(255,255,255,0.2) !important;
+  border-radius: 18px !important;
+}
+#taskbar.app-dock .tb-app-btn:hover,
+#taskbar.app-dock #tb-taskview:hover,
+#taskbar.app-dock .tb-start-btn:hover {
+  background: rgba(255,255,255,0.28) !important;
+  box-shadow: 0 4px 16px rgba(0,0,0,0.2), inset 0 1px 0 rgba(255,255,255,0.3);
+}
+#taskbar.app-dock .tb-app-btn.running::after {
+  content: '';
+  position: absolute;
+  bottom: 3px; left: 50%;
+  transform: translateX(-50%);
+  width: 5px; height: 5px;
+  border-radius: 50%;
+  background: rgba(255,255,255,0.85);
+  box-shadow: 0 0 6px rgba(255,255,255,0.5);
+}
+
+/* Performance modes */
+body.perf-balanced #taskbar.app-dock,
+body.perf-balanced #quick-access,
+body.perf-balanced #start-menu,
+body.perf-balanced #vertical-bubble {
+  backdrop-filter: blur(12px) !important;
+  -webkit-backdrop-filter: blur(12px) !important;
+}
+body.perf-performance,
+body.perf-performance * {
+  animation-duration: 0.01ms !important;
+  animation-iteration-count: 1 !important;
+  transition-duration: 0.01ms !important;
+}
+body.perf-performance #taskbar.app-dock,
+body.perf-performance #quick-access,
+body.perf-performance #start-menu,
+body.perf-performance #vertical-bubble,
+body.perf-performance .window {
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
+}
+body.perf-performance #taskbar.app-dock {
+  background: var(--dock-bg) !important;
+  box-shadow: 0 4px 16px rgba(0,0,0,0.25) !important;
+}
+
+/* Boot loader */
+#mica-boot-loader {
+  position: fixed; inset: 0; z-index: 999999;
+  display: flex; flex-direction: column;
+  align-items: center; justify-content: center;
+  gap: 18px;
+  background: var(--bg);
+  color: var(--text);
+}
+#mica-boot-loader .mbl-orb {
+  width: 48px; height: 48px;
+  border-radius: 50%;
+  border: 3px solid rgba(128,128,128,0.25);
+  border-top-color: var(--text);
+  animation: mblSpin 0.7s linear infinite;
+}
+@keyframes mblSpin { to { transform: rotate(360deg); } }
+.mbl-text { font-size: 13px; opacity: 0.7; letter-spacing: 0.3px; }
+
+/* Setup wizard */
+#setup-wizard {
+  position: fixed; inset: 0; z-index: 1000000;
+  display: none; align-items: center; justify-content: center;
+  background: radial-gradient(ellipse at 30% 20%, rgba(120,140,200,0.15), transparent 50%),
+              radial-gradient(ellipse at 70% 80%, rgba(80,60,120,0.12), transparent 45%),
+              var(--bg);
+}
+#setup-wizard.open { display: flex !important; }
+.sw-card {
+  width: min(440px, 92vw);
+  background: var(--win-bg);
+  border: 1px solid var(--dock-border);
+  border-radius: 20px;
+  box-shadow: 0 24px 64px rgba(0,0,0,0.35);
+  padding: 28px 28px 22px;
+  color: var(--text);
+  animation: swIn 0.35s cubic-bezier(0.2, 0.9, 0.2, 1);
+}
+@keyframes swIn {
+  from { opacity: 0; transform: translateY(12px) scale(0.97); }
+  to { opacity: 1; transform: none; }
+}
+.sw-progress {
+  height: 4px; border-radius: 4px;
+  background: rgba(128,128,128,0.2);
+  margin-bottom: 22px; overflow: hidden;
+}
+.sw-bar {
+  height: 100%; width: 20%;
+  background: linear-gradient(90deg, #6ea8fe, #a78bfa);
+  border-radius: 4px;
+  transition: width 0.3s ease;
+}
+.sw-card h2 { margin: 0 0 8px; font-size: 22px; }
+.sw-card p.sw-sub { margin: 0 0 18px; opacity: 0.6; font-size: 13px; }
+.sw-options { display: flex; flex-direction: column; gap: 8px; margin-bottom: 18px; }
+.sw-opt {
+  display: flex; align-items: center; gap: 12px;
+  padding: 12px 14px; border-radius: 12px;
+  border: 1px solid var(--dock-border);
+  background: rgba(128,128,128,0.08);
+  cursor: pointer; font-size: 13px;
+  transition: background 0.15s, border-color 0.15s;
+}
+.sw-opt:hover { background: rgba(128,128,128,0.16); }
+.sw-opt.on {
+  border-color: #6ea8fe;
+  background: rgba(110,168,254,0.15);
+}
+.sw-opt .sw-ico { font-size: 20px; width: 28px; text-align: center; }
+.sw-nav { display: flex; gap: 10px; justify-content: flex-end; }
+.sw-nav button { min-width: 90px; }
+
+/* Mission Control */
+#task-view.mc {
+  position: fixed; inset: 0; z-index: 500000;
+  display: flex; flex-direction: column;
+  animation: mcFade 0.25s ease;
+}
+@keyframes mcFade { from { opacity: 0; } to { opacity: 1; } }
+#task-view.mc .tv-backdrop {
+  position: absolute; inset: 0;
+  background: rgba(10,10,14,0.55);
+  backdrop-filter: blur(28px) saturate(1.2);
+  -webkit-backdrop-filter: blur(28px) saturate(1.2);
+}
+body.perf-performance #task-view.mc .tv-backdrop {
+  backdrop-filter: none; background: rgba(10,10,14,0.85);
+}
+.mc-strip {
+  position: relative; z-index: 2;
+  display: flex; gap: 16px; align-items: stretch;
+  justify-content: center;
+  padding: 48px 32px 24px;
+  overflow-x: auto; overflow-y: hidden;
+  flex: 1;
+  scroll-snap-type: x mandatory;
+}
+.mc-card {
+  flex: 0 0 auto;
+  width: min(280px, 42vw);
+  scroll-snap-align: center;
+  display: flex; flex-direction: column;
+  gap: 10px;
+  cursor: pointer;
+  transition: transform 0.22s cubic-bezier(0.2, 0.9, 0.2, 1);
+}
+.mc-card:hover { transform: translateY(-6px) scale(1.02); }
+.mc-card.active .mc-preview {
+  outline: 2px solid #6ea8fe;
+  box-shadow: 0 0 0 4px rgba(110,168,254,0.25), 0 16px 40px rgba(0,0,0,0.35);
+}
+.mc-preview {
+  aspect-ratio: 16/10;
+  border-radius: 14px;
+  background: var(--win-bg);
+  border: 1px solid rgba(255,255,255,0.12);
+  box-shadow: 0 12px 36px rgba(0,0,0,0.35);
+  overflow: hidden;
+  position: relative;
+  display: flex; flex-wrap: wrap; align-content: flex-start;
+  gap: 6px; padding: 10px;
+}
+.mc-preview.fs {
+  background: linear-gradient(145deg, #1a1a22, #0e0e14);
+  align-items: center; justify-content: center;
+  flex-wrap: nowrap;
+}
+.mc-preview.fs .mc-fs-title {
+  font-size: 18px; font-weight: 600; color: #fff; text-align: center;
+  padding: 12px;
+}
+.mc-win-chip {
+  font-size: 10px; padding: 6px 8px;
+  border-radius: 6px;
+  background: rgba(128,128,128,0.2);
+  border: 1px solid rgba(255,255,255,0.08);
+  color: var(--text);
+  max-width: 46%;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.mc-label {
+  text-align: center; font-size: 12px; opacity: 0.75; color: #fff;
+}
+.mc-dock {
+  position: relative; z-index: 2;
+  display: flex; justify-content: center; gap: 10px;
+  padding: 8px 16px 28px;
+}
+.mc-dock button {
+  padding: 8px 16px; border-radius: 10px;
+  background: rgba(255,255,255,0.12);
+  border: 1px solid rgba(255,255,255,0.15);
+  color: #fff; cursor: pointer; font-size: 12px;
+}
+.mc-dock button:hover { background: rgba(255,255,255,0.22); }
+.mc-hint {
+  position: relative; z-index: 2;
+  text-align: center; font-size: 11px; opacity: 0.45; color: #fff;
+  padding-bottom: 16px;
+}
+
+/* Space swipe transitions — smoother */
+.window.space-out-left, .window.space-out-right,
+.window.space-in-left, .window.space-in-right {
+  transition: transform 0.32s cubic-bezier(0.22, 1, 0.36, 1), opacity 0.28s ease !important;
+}
+body.perf-performance .window.space-out-left,
+body.perf-performance .window.space-out-right,
+body.perf-performance .window.space-in-left,
+body.perf-performance .window.space-in-right {
+  transition: none !important;
+}
+
+/* Window open loading shimmer */
+.window.win-loading .win-content::after {
+  content: '';
+  position: absolute; inset: 0;
+  background: linear-gradient(90deg, transparent, rgba(255,255,255,0.06), transparent);
+  animation: winShimmer 1s ease infinite;
+  pointer-events: none;
+}
+@keyframes winShimmer {
+  from { transform: translateX(-100%); }
+  to { transform: translateX(100%); }
+}
+
+
+/* ═══════════════ Pyron 9.4 — Topbar clearance · Studio · Dock ═══════════════ */
+
+/* Top bar is a fixed overlay — push chrome that would sit under it */
+body.bubble-pin-topbar #toast-container,
+body.layout-topbar #toast-container {
+  top: 40px !important;
+}
+body.bubble-pin-topbar #start-menu,
+body.layout-topbar #start-menu {
+  /* when classic bottom taskbar, start still near taskbar; when topbar only, keep clear of 28px bar */
+}
+body.bubble-pin-topbar #vertical-bubble:not(.pin-topbar):not(.pin-taskbar) {
+  top: max(40px, var(--bubble-top, 50px));
+}
+body.bubble-pin-topbar .dt-icon {
+  /* desktop icons already inside #desktop which is margin-shifted */
+}
+
+/* Ensure topbar itself stays above desktop content */
+#topbar-extras, .topbar-left, body.bubble-pin-topbar #vertical-bubble.pin-topbar {
+  z-index: 95000;
+}
+
+/* Quick access under topbar */
+body.bubble-pin-topbar #quick-access.qa-mode-drop,
+body.layout-topbar #quick-access.qa-mode-drop {
+  /* positionQuick already uses 36px; reinforce min top via JS */
+}
+
+/* Mission Control / task view under topbar is full-bleed OK */
+
+/* Studio workspace */
+.studio-nav {
+  text-align: left !important;
+  padding: 8px 10px !important;
+  border-radius: 8px !important;
+  border: 1px solid transparent !important;
+  background: transparent !important;
+  color: var(--text) !important;
+  font-size: 12px !important;
+  cursor: pointer;
+}
+.studio-nav:hover { background: rgba(128,128,128,0.12) !important; }
+.studio-nav.on {
+  background: rgba(110,168,254,0.18) !important;
+  border-color: rgba(110,168,254,0.35) !important;
+}
+.studio-file:hover { background: rgba(128,128,128,0.14); }
+
+/* Dock proportions — slightly tighter, persistent glass */
+#taskbar.app-dock {
+  min-height: 64px;
+  padding: 8px 14px 12px !important;
+  gap: 8px !important;
+}
+#taskbar.app-dock .tb-start-btn,
+#taskbar.app-dock .tb-app-btn,
+#taskbar.app-dock #tb-taskview,
+#taskbar.app-dock .tb-fixed-slot {
+  width: 44px !important;
+  height: 44px !important;
+  min-width: 44px !important;
+  min-height: 44px !important;
+  border-radius: 14px !important;
+}
+#taskbar.app-dock #tb-apps {
+  gap: 8px !important;
+}
+
+/* Jade dialogs sit above windows */
+.window[id^="win_save_"],
+.window[id^="win_picker_"] {
+  z-index: 250000 !important;
+}
+
+/* ═══════════════ Pyron 9.6 — Studio · Quick glass · MicaTasking · menus ═══════════════ */
+
+/* Start / Quick: no teleport — fade in after position is set */
+#start-menu {
+  transition: opacity 0.16s ease, transform 0.18s cubic-bezier(0.2, 0.9, 0.2, 1);
+  transform-origin: bottom center;
+}
+#start-menu.sm-centered { transform-origin: bottom center; }
+body.tb-pos-top #start-menu.sm-centered { transform-origin: top center; }
+#start-menu.sm-anim-in.open {
+  animation: smFadeIn 0.18s cubic-bezier(0.2, 0.9, 0.2, 1);
+}
+@keyframes smFadeIn {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+#start-menu.sm-centered.sm-anim-in.open {
+  /* keep inline translateX(-50%); only fade */
+  animation: smFadeIn 0.16s ease;
+}
+body:not(.app-dock-on) #start-menu.sm-anim-in.open {
+  animation: smFadeInCorner 0.16s ease;
+}
+@keyframes smFadeInCorner {
+  from { opacity: 0; transform: translateY(6px) scale(0.98); }
+  to   { opacity: 1; transform: none; }
+}
+body.no-anim #start-menu.sm-anim-in.open { animation: none; }
+
+#quick-access {
+  background: color-mix(in srgb, var(--win-bg) 88%, transparent);
+  backdrop-filter: blur(22px) saturate(1.35);
+  -webkit-backdrop-filter: blur(22px) saturate(1.35);
+  border: 1px solid color-mix(in srgb, var(--dock-border) 80%, transparent);
+  box-shadow: 0 16px 48px rgba(0,0,0,0.28), inset 0 1px 0 rgba(255,255,255,0.06);
+  transition: opacity 0.16s ease, transform 0.18s cubic-bezier(0.2, 0.9, 0.2, 1);
+}
+#quick-access.qa-anim-in.open {
+  animation: qaFadeIn 0.18s cubic-bezier(0.2, 0.9, 0.2, 1);
+}
+@keyframes qaFadeIn {
+  from { opacity: 0; transform: translateY(6px) scale(0.97); }
+  to   { opacity: 1; transform: none; }
+}
+body.no-anim #quick-access.qa-anim-in.open { animation: none; }
+body.perf-performance #quick-access {
+  backdrop-filter: none; background: var(--win-bg);
+}
+#quick-access .qa-chrome {
+  border-bottom: 1px solid color-mix(in srgb, var(--dock-border) 70%, transparent);
+  margin: -4px -4px 8px; padding: 4px 6px 10px;
+}
+#quick-access .qa-title { letter-spacing: 0.2px; font-weight: 600; }
+.qa-slider-row, .qa-slider-block, .qa-cc-card {
+  background: color-mix(in srgb, var(--well-bg) 90%, transparent);
+  border-radius: 12px;
+  border: 1px solid color-mix(in srgb, var(--dock-border) 50%, transparent);
+}
+.qa-mini-btn, .qa-task-tile {
+  border-radius: 10px;
+  background: color-mix(in srgb, var(--well-bg) 85%, transparent);
+  border: 1px solid color-mix(in srgb, var(--dock-border) 55%, transparent);
+  transition: background 0.15s, transform 0.12s;
+}
+.qa-mini-btn:hover, .qa-task-tile:hover {
+  background: color-mix(in srgb, var(--text) 12%, transparent);
+  transform: translateY(-1px);
+}
+
+/* Beryl Studio shell */
+.studio-shell {
+  display: flex; flex-direction: column; height: 100%;
+  background: var(--win-bg); color: var(--text); overflow: hidden;
+}
+.studio-menubar {
+  display: flex; align-items: center; gap: 2px;
+  padding: 4px 8px; min-height: 34px;
+  background: color-mix(in srgb, var(--well-bg) 80%, transparent);
+  border-bottom: 1px solid var(--dock-border);
+  flex-shrink: 0;
+}
+.studio-brand {
+  font-size: 12px; font-weight: 700; opacity: 0.75;
+  margin-right: 10px; letter-spacing: 0.3px;
+}
+.studio-dd { position: relative; }
+.studio-dd-btn {
+  background: transparent; border: none; color: var(--text);
+  font-size: 12px; padding: 5px 10px; border-radius: 6px; cursor: pointer;
+}
+.studio-dd-btn:hover, .studio-dd.open .studio-dd-btn {
+  background: rgba(128,128,128,0.16);
+}
+.studio-dd-menu {
+  display: none; position: absolute; top: 100%; left: 0; z-index: 50;
+  min-width: 180px; padding: 6px;
+  background: var(--win-bg); border: 1px solid var(--dock-border);
+  border-radius: 10px; box-shadow: 0 12px 32px rgba(0,0,0,0.35);
+}
+.studio-dd.open .studio-dd-menu { display: flex; flex-direction: column; gap: 2px; }
+.studio-dd-menu button {
+  text-align: left; background: transparent; border: none; color: var(--text);
+  font-size: 12px; padding: 7px 10px; border-radius: 7px; cursor: pointer;
+}
+.studio-dd-menu button:hover { background: rgba(110,168,254,0.15); }
+.studio-menubar-spacer { flex: 1; }
+.studio-hint { font-size: 10px; opacity: 0.45; margin-right: 6px; }
+.studio-body { display: flex; flex: 1; min-height: 0; }
+.studio-rail {
+  width: 188px; min-width: 160px;
+  background: rgba(0,0,0,0.14);
+  border-right: 1px solid var(--dock-border);
+  display: flex; flex-direction: column; padding: 8px 0;
+}
+.studio-rail-sec {
+  font-size: 10px; font-weight: 700; opacity: 0.45;
+  letter-spacing: 0.5px; padding: 8px 12px 4px;
+}
+.studio-rail-row { display: flex; gap: 4px; padding: 0 8px 6px; flex-wrap: wrap; }
+.studio-rail-row button { font-size: 10px; padding: 3px 7px; border-radius: 6px; }
+.studio-files { flex: 1; overflow: auto; padding: 4px 8px; font-size: 12px; }
+.studio-rail-foot {
+  padding: 8px 10px; border-top: 1px solid var(--dock-border);
+  font-size: 10px; opacity: 0.45; line-height: 1.35;
+}
+.studio-view { flex: 1; display: flex; flex-direction: column; min-width: 0; overflow: hidden; }
+.studio-toolbar {
+  display: flex; gap: 6px; align-items: center; flex-wrap: wrap;
+  padding: 8px 10px; background: var(--well-bg);
+  border-bottom: 1px solid var(--dock-border);
+}
+.studio-name { width: 130px; }
+.studio-icon { width: 42px; text-align: center; }
+.studio-toolbar-spacer { flex: 1; }
+.studio-subbar {
+  padding: 5px 10px; font-size: 11px; opacity: 0.6;
+  background: var(--well-bg); border-bottom: 1px solid var(--dock-border);
+}
+.studio-sub-hint code {
+  font-size: 10px; background: rgba(128,128,128,0.15); padding: 1px 4px; border-radius: 4px;
+}
+.studio-tabs {
+  display: flex; gap: 4px; padding: 6px 10px;
+  background: var(--well-bg); border-bottom: 1px solid var(--dock-border);
+}
+.studio-tabs button { font-size: 11px; padding: 5px 10px; border-radius: 7px; }
+.studio-split { display: flex; flex: 1; min-height: 0; }
+.studio-editors { flex: 1; display: flex; flex-direction: column; min-width: 0; position: relative; }
+.studio-code-wrap {
+  flex: 1; position: relative; min-height: 0; overflow: hidden;
+  background: #121218;
+}
+.studio-hl, .studio-code {
+  position: absolute; inset: 0;
+  margin: 0; padding: 12px 14px;
+  font-family: Consolas, 'Cascadia Code', 'Fira Code', monospace;
+  font-size: 12.5px; line-height: 1.5;
+  white-space: pre; overflow: auto;
+  tab-size: 2; border: none; outline: none;
+  box-sizing: border-box;
+}
+.studio-hl {
+  color: #c8c8d0; pointer-events: none; z-index: 0;
+  background: transparent;
+}
+.studio-code {
+  z-index: 1; color: transparent; caret-color: #e8e8f0;
+  background: transparent; resize: none;
+  -webkit-text-fill-color: transparent;
+}
+.studio-code::selection { background: rgba(110,168,254,0.35); color: transparent; -webkit-text-fill-color: transparent; }
+.hl-kw { color: #c792ea; }
+.hl-str { color: #c3e88d; }
+.hl-cmt { color: #676e95; font-style: italic; }
+.hl-num { color: #f78c6c; }
+.hl-tag { color: #89ddff; }
+.hl-attr { color: #ffcb6b; }
+.hl-sel { color: #82aaff; }
+.studio-preview {
+  width: 40%; min-width: 180px; border: none;
+  border-left: 1px solid var(--dock-border); background: #1a1a1e;
+}
+.studio-assets-pane {
+  flex: 1; flex-direction: column; min-height: 0; overflow: auto;
+  padding: 12px; background: #121218;
+}
+.studio-assets-head {
+  display: flex; flex-wrap: wrap; gap: 8px; align-items: center;
+  margin-bottom: 12px; font-size: 12px;
+}
+.studio-assets-head span { opacity: 0.55; font-size: 11px; flex: 1; min-width: 140px; }
+.studio-assets-list { display: flex; flex-direction: column; gap: 6px; }
+.studio-assets-empty {
+  opacity: 0.5; padding: 24px; text-align: center; font-size: 12px; line-height: 1.5;
+}
+.studio-asset-row {
+  display: flex; align-items: center; gap: 10px;
+  padding: 8px 10px; border-radius: 10px;
+  background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.06);
+}
+.studio-asset-thumb { width: 28px; height: 28px; object-fit: contain; border-radius: 4px; }
+.studio-asset-ico { width: 28px; text-align: center; }
+.studio-asset-name { font-size: 12px; font-weight: 600; min-width: 80px; }
+.studio-asset-path { font-size: 10px; opacity: 0.55; flex: 1; }
+.studio-nav {
+  margin: 1px 8px; text-align: left; padding: 7px 10px;
+  border-radius: 8px; border: none; background: transparent;
+  color: var(--text); cursor: pointer; font-size: 12px;
+}
+.studio-nav:hover { background: rgba(128,128,128,0.12) !important; }
+.studio-nav.on {
+  background: rgba(110,168,254,0.18) !important;
+  color: #9ec5fe;
+}
+
+/* MicaTasking */
+#task-view.mc .mc-title {
+  position: relative; z-index: 2;
+  text-align: center; font-size: 15px; font-weight: 600;
+  color: #fff; letter-spacing: 0.4px;
+  padding: 28px 16px 0; opacity: 0.9;
+}
+.mc-preview.space {
+  display: grid; grid-template-columns: 1fr 1fr;
+  grid-auto-rows: 1fr; gap: 6px; padding: 8px;
+  background: linear-gradient(160deg, rgba(30,32,40,0.95), rgba(14,14,20,0.98));
+}
+.mc-empty {
+  grid-column: 1 / -1; display: flex; align-items: center; justify-content: center;
+  opacity: 0.4; font-size: 12px; color: #fff;
+}
+.mc-win-preview {
+  border-radius: 8px; overflow: hidden;
+  background: var(--win-bg, #1e1e22);
+  border: 1px solid rgba(255,255,255,0.1);
+  display: flex; flex-direction: column; min-height: 0;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.25);
+}
+.mc-win-titlebar {
+  display: flex; align-items: center; gap: 6px;
+  padding: 4px 6px; background: rgba(0,0,0,0.25);
+  font-size: 9px; color: var(--text);
+}
+.mc-win-dots::before { content: '● ● ●'; font-size: 6px; opacity: 0.45; letter-spacing: 1px; }
+.mc-win-ttl { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; flex: 1; opacity: 0.85; }
+.mc-win-body {
+  flex: 1; display: flex; align-items: center; gap: 6px;
+  padding: 8px; min-height: 36px;
+}
+.mc-win-ico { font-size: 18px; }
+.mc-win-snippet {
+  font-size: 9px; opacity: 0.5; line-height: 1.3;
+  overflow: hidden; display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical;
+}
+.mc-preview.fs .mc-win-preview { width: 100%; height: 100%; }
+.mc-preview.fs { padding: 10px; display: flex; align-items: stretch; }
+
+/* ═══════════════ Pyron 9.7 — desktop grid · theme isolation · MicaTasking under ═══════════════ */
+.dt-icon {
+  position: absolute;
+  width: 80px;
+  height: 84px;
+  z-index: 2;
+  user-select: none;
+}
+.mc-desk-face {
+  width: 100%; height: 100%;
+  display: flex; align-items: center; justify-content: center;
+  background:
+    linear-gradient(145deg, rgba(80,100,140,0.25), rgba(20,22,30,0.9)),
+    repeating-linear-gradient(0deg, transparent, transparent 11px, rgba(255,255,255,0.03) 11px, rgba(255,255,255,0.03) 12px);
+}
+.mc-desk-num {
+  font-size: 42px; font-weight: 700; color: rgba(255,255,255,0.35);
+  letter-spacing: -1px;
+}
+.mc-under {
+  display: flex; flex-direction: column; gap: 4px;
+  margin-top: 2px; max-height: 120px; overflow-y: auto;
+  scrollbar-width: thin;
+}
+.mc-under-empty {
+  font-size: 11px; opacity: 0.4; color: #fff; text-align: center; padding: 4px;
+}
+.mc-under-app {
+  display: flex; align-items: center; gap: 8px;
+  width: 100%; text-align: left;
+  padding: 6px 8px; border-radius: 8px;
+  background: rgba(255,255,255,0.08);
+  border: 1px solid rgba(255,255,255,0.1);
+  color: #fff; font-size: 11px; cursor: pointer;
+  transition: background 0.12s;
+}
+.mc-under-app:hover { background: rgba(110,168,254,0.28); }
+.mc-under-ico { opacity: 0.7; }
+.mc-under-name {
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap; flex: 1;
+}
+.mc-card { width: min(260px, 40vw); }
+.mc-preview.space {
+  display: block; padding: 0;
+  aspect-ratio: 16/10;
+}
+
+/* ═══════════════ Pyron 9.8 — fixed grid · unsaved · start features ═══════════════ */
+.mica-modal-overlay {
+  position: fixed; inset: 0; z-index: 6000000;
+  background: rgba(0,0,0,0.45);
+  backdrop-filter: blur(8px);
+  display: flex; align-items: center; justify-content: center;
+}
+.mica-modal-card {
+  width: min(380px, 92vw);
+  background: var(--win-bg);
+  border: 1px solid var(--dock-border);
+  border-radius: 14px;
+  padding: 20px 22px;
+  box-shadow: 0 20px 48px rgba(0,0,0,0.4);
+  color: var(--text);
+}
+.sm-features {
+  display: flex; flex-direction: column; gap: 14px;
+  padding: 8px 4px 12px; overflow: auto;
+}
+.sm-feat-sec { display: flex; flex-direction: column; gap: 8px; }
+.sm-feat-h {
+  font-size: 11px; font-weight: 700; opacity: 0.5;
+  letter-spacing: 0.4px; text-transform: uppercase;
+}
+.sm-feat-row { display: flex; flex-wrap: wrap; gap: 6px; }
+.sm-feat-chip {
+  display: inline-flex; align-items: center; gap: 6px;
+  padding: 7px 10px; border-radius: 10px;
+  background: rgba(128,128,128,0.12);
+  border: 1px solid var(--dock-border);
+  color: var(--text); font-size: 12px; cursor: pointer;
+  max-width: 100%;
+}
+.sm-feat-chip:hover { background: rgba(110,168,254,0.18); }
+.sm-feat-chip span {
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 140px;
+}
+.sm-feat-files { display: flex; flex-direction: column; gap: 4px; }
+.sm-feat-file {
+  text-align: left; padding: 7px 10px; border-radius: 8px;
+  background: transparent; border: none; color: var(--text);
+  font-size: 12px; cursor: pointer;
+}
+.sm-feat-file:hover { background: rgba(128,128,128,0.14); }
+.sm-feat-empty { font-size: 12px; opacity: 0.45; padding: 4px 0; }
+
+
+/* ── Unsaved changes as a real window ── */
+.mica-unsaved-win {
+  box-shadow: 0 16px 48px rgba(0,0,0,0.45) !important;
+  border-radius: 12px !important;
+  overflow: hidden;
+}
+.mica-unsaved-win .win-content {
+  background: var(--win-bg, #2a2a2e);
+}
+
+/* ── Dock file-jump (Finder-style) ── */
+.mica-dock-fly {
+  position: fixed;
+  z-index: 999999;
+  font-size: 28px;
+  pointer-events: none;
+  transform: translate(-50%, -50%) scale(1);
+  transition: left 0.55s cubic-bezier(0.2, 0.8, 0.2, 1),
+              top 0.55s cubic-bezier(0.2, 0.8, 0.2, 1),
+              opacity 0.55s ease, transform 0.55s ease;
+  filter: drop-shadow(0 4px 10px rgba(0,0,0,0.35));
+}
+.tb-app-btn.dock-bounce {
+  animation: micaDockBounce 0.55s ease;
+}
+@keyframes micaDockBounce {
+  0% { transform: scale(1); }
+  30% { transform: scale(1.22); }
+  55% { transform: scale(0.92); }
+  100% { transform: scale(1); }
+}
+#taskbar.app-dock #tb-apps {
+  justify-content: center;
+  gap: 10px;
+}
+
+/* ── MicaTasking close on under-app ── */
+.mc-under-row {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  width: 100%;
+}
+.mc-under-row .mc-under-app {
+  flex: 1;
+  min-width: 0;
+}
+.mc-under-close {
+  flex: 0 0 auto;
+  width: 22px;
+  height: 22px;
+  border: none;
+  border-radius: 6px;
+  background: rgba(255,95,86,0.15);
+  color: #ff5f56;
+  cursor: pointer;
+  font-size: 11px;
+  line-height: 1;
+  padding: 0;
+}
+.mc-under-close:hover {
+  background: rgba(255,95,86,0.35);
+}
+
+
+/* ── Lock session: shell chrome cannot be used ── */
+body.mica-locked #taskbar,
+body.mica-locked #vertical-bubble,
+body.mica-locked #topbar-extras,
+body.mica-locked #start-menu,
+body.mica-locked #quick-access,
+body.mica-locked #desktop,
+body.mica-locked #mica-fs-layer {
+  pointer-events: none !important;
+  visibility: hidden !important;
+}
+body.mica-locked #lock-screen {
+  pointer-events: auto !important;
+  visibility: visible !important;
+  z-index: 5000000 !important;
+}
+body.mica-locked #toast-container {
+  z-index: 5000001;
+}
+
+/* Multi-instance tray flyout (Windows-style) */
+.tb-app-btn { position: relative; }
+.tb-app-btn .tb-inst-badge {
+  position: absolute;
+  top: -2px; right: -2px;
+  min-width: 14px; height: 14px;
+  border-radius: 8px;
+  background: #0078d4;
+  color: #fff;
+  font-size: 9px;
+  line-height: 14px;
+  text-align: center;
+  padding: 0 3px;
+  pointer-events: none;
+}
+.tb-instance-flyout {
+  position: fixed;
+  z-index: 900000;
+  display: flex;
+  gap: 8px;
+  padding: 10px;
+  background: rgba(28,28,32,0.94);
+  border: 1px solid rgba(255,255,255,0.12);
+  border-radius: 12px;
+  backdrop-filter: blur(16px);
+  box-shadow: 0 12px 40px rgba(0,0,0,0.45);
+  max-width: min(92vw, 720px);
+  overflow-x: auto;
+}
+.tb-instance-card {
+  width: 160px;
+  min-width: 140px;
+  background: rgba(255,255,255,0.06);
+  border: 1px solid rgba(255,255,255,0.1);
+  border-radius: 10px;
+  padding: 8px;
+  cursor: pointer;
+  text-align: left;
+  color: inherit;
+  font: inherit;
+}
+.tb-instance-card:hover { background: rgba(0,120,212,0.25); border-color: rgba(0,120,212,0.5); }
+.tb-instance-card .tb-ic-title {
+  font-size: 11px; font-weight: 600;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  margin-bottom: 6px;
+}
+.tb-instance-card .tb-ic-preview {
+  height: 72px;
+  border-radius: 6px;
+  background: rgba(0,0,0,0.35);
+  display: flex; align-items: center; justify-content: center;
+  font-size: 28px; opacity: 0.85;
+}
+.tb-instance-card .tb-ic-close {
+  float: right; border: none; background: transparent;
+  color: #ff5f56; cursor: pointer; font-size: 12px;
+}
+
+
+/* ── Multi-instance flyout (refined) ── */
+.tb-instance-flyout {
+  position: fixed;
+  z-index: 900000;
+  opacity: 0;
+  transform: translateY(6px) scale(0.98);
+  transition: opacity 0.14s ease, transform 0.14s ease;
+  pointer-events: none;
+  padding: 10px 12px 12px;
+  background: rgba(32, 32, 36, 0.92);
+  border: 1px solid rgba(255,255,255,0.1);
+  border-radius: 14px;
+  backdrop-filter: blur(18px) saturate(1.2);
+  -webkit-backdrop-filter: blur(18px) saturate(1.2);
+  box-shadow: 0 16px 48px rgba(0,0,0,0.5);
+  max-width: min(92vw, 640px);
+}
+.tb-instance-flyout.open {
+  opacity: 1;
+  transform: none;
+  pointer-events: auto;
+}
+.tb-fly-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 11px;
+  opacity: 0.7;
+  margin-bottom: 8px;
+  padding: 0 2px;
+}
+.tb-fly-count {
+  background: rgba(0,120,212,0.35);
+  color: #9fd0ff;
+  border-radius: 8px;
+  padding: 1px 7px;
+  font-size: 10px;
+}
+.tb-fly-row { display: flex; gap: 8px; overflow-x: auto; }
+.tb-instance-card {
+  width: 132px;
+  min-width: 120px;
+  background: rgba(255,255,255,0.05);
+  border: 1px solid rgba(255,255,255,0.08);
+  border-radius: 10px;
+  padding: 8px;
+  cursor: pointer;
+  position: relative;
+  transition: background 0.12s, border-color 0.12s, transform 0.12s;
+}
+.tb-instance-card:hover {
+  background: rgba(0,120,212,0.22);
+  border-color: rgba(0,120,212,0.45);
+  transform: translateY(-1px);
+}
+.tb-ic-preview {
+  height: 64px;
+  border-radius: 8px;
+  background: rgba(0,0,0,0.28);
+  display: flex; align-items: center; justify-content: center;
+  font-size: 26px;
+  margin-bottom: 6px;
+}
+.tb-ic-title {
+  font-size: 11px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  opacity: 0.9;
+}
+.tb-ic-close {
+  position: absolute;
+  top: 4px; right: 4px;
+  width: 18px; height: 18px;
+  border: none;
+  border-radius: 6px;
+  background: rgba(255,95,86,0.2);
+  color: #ff8a84;
+  font-size: 10px;
+  line-height: 1;
+  cursor: pointer;
+  opacity: 0;
+  transition: opacity 0.12s;
+}
+.tb-instance-card:hover .tb-ic-close { opacity: 1; }
+
+/* Topbar menus */
+.topbar-dd-sep {
+  height: 1px;
+  background: rgba(255,255,255,0.08);
+  margin: 4px 6px;
+}
+.topbar-dd-label {
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  opacity: 0.45;
+  padding: 6px 12px 2px;
+}
+.topbar-recent-files { max-height: 160px; overflow: auto; }
+
+/* Wallpaper presets */
+.wp-preset-card {
+  width: 112px;
+  padding: 0;
+  border: 1px solid var(--dock-border, #3a3a40);
+  border-radius: 10px;
+  overflow: hidden;
+  background: var(--input-bg, #1a1a1e);
+  color: inherit;
+  cursor: pointer;
+  text-align: center;
+}
+.wp-preset-card img {
+  display: block;
+  width: 100%;
+  height: 64px;
+  object-fit: cover;
+}
+.wp-preset-card span {
+  display: block;
+  font-size: 11px;
+  padding: 6px 4px;
+  opacity: 0.8;
+}
+.wp-preset-card:hover {
+  border-color: rgba(0,120,212,0.55);
+}
+
+.wp-picker-host { margin: 4px 0 8px; }
+.wp-gallery {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+.wp-preset-card.selected {
+  outline: 2px solid #0078d4;
+  outline-offset: 2px;
+}
+.wp-preset-card .wp-ph {
+  height: 64px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(0,0,0,0.25);
+  font-size: 22px;
+}
+.wp-gallery .wp-preset-card {
+  transition: transform 0.15s ease, outline-color 0.15s;
+}
+.wp-gallery .wp-preset-card:active {
+  transform: scale(0.97);
+}
+
+
+/* ═══ 10.2.3 flyout — liquid glass ═══ */
+.tb-instance-flyout {
+  position: fixed;
+  z-index: 900000;
+  opacity: 0;
+  transform: translateY(8px) scale(0.96);
+  transition: opacity 0.16s ease, transform 0.16s ease;
+  pointer-events: none;
+  padding: 12px 14px 14px;
+  background: rgba(22, 22, 26, 0.55);
+  border: 1px solid rgba(255,255,255,0.14);
+  border-radius: 16px;
+  backdrop-filter: blur(28px) saturate(1.35);
+  -webkit-backdrop-filter: blur(28px) saturate(1.35);
+  box-shadow: 0 20px 50px rgba(0,0,0,0.45), inset 0 1px 0 rgba(255,255,255,0.08);
+  max-width: min(94vw, 720px);
+}
+.tb-instance-flyout.open {
+  opacity: 1;
+  transform: none;
+  pointer-events: auto;
+}
+.tb-fly-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 10px;
+  padding: 0 2px;
+}
+.tb-fly-title {
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.01em;
+  opacity: 0.85;
+}
+.tb-fly-count {
+  font-size: 10px;
+  font-weight: 600;
+  padding: 2px 8px;
+  border-radius: 999px;
+  background: rgba(255,255,255,0.1);
+  border: 1px solid rgba(255,255,255,0.12);
+}
+.tb-fly-row {
+  display: flex;
+  gap: 10px;
+  overflow-x: auto;
+  padding-bottom: 2px;
+}
+.tb-instance-card {
+  width: 176px;
+  min-width: 160px;
+  background: rgba(255,255,255,0.06);
+  border: 1px solid rgba(255,255,255,0.1);
+  border-radius: 12px;
+  padding: 8px;
+  cursor: pointer;
+  position: relative;
+  transition: background 0.12s, border-color 0.12s, transform 0.12s, box-shadow 0.12s;
+}
+.tb-instance-card:hover {
+  background: rgba(255,255,255,0.11);
+  border-color: rgba(255,255,255,0.22);
+  transform: translateY(-2px);
+  box-shadow: 0 8px 20px rgba(0,0,0,0.25);
+}
+.tb-instance-card.is-min { opacity: 0.72; }
+.tb-ic-preview {
+  height: 100px;
+  border-radius: 8px;
+  overflow: hidden;
+  background: rgba(0,0,0,0.35);
+  position: relative;
+  margin-bottom: 8px;
+  border: 1px solid rgba(255,255,255,0.06);
+}
+.tb-ic-stage {
+  position: relative;
+  overflow: hidden;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+}
+.tb-ic-clone {
+  pointer-events: none !important;
+  border-radius: 6px !important;
+}
+.tb-ic-empty {
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 22px;
+  opacity: 0.45;
+}
+.tb-ic-title {
+  font-size: 11px;
+  font-weight: 500;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  opacity: 0.9;
+  padding: 0 2px;
+}
+.tb-ic-close {
+  position: absolute;
+  top: 6px;
+  right: 6px;
+  z-index: 5;
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  background: rgba(30,30,34,0.85);
+  border: 1px solid rgba(255,255,255,0.15);
+  color: #eee;
+  font-size: 11px;
+  line-height: 20px;
+  text-align: center;
+  cursor: pointer;
+  opacity: 0;
+  transition: opacity 0.12s, background 0.12s, color 0.12s;
+  backdrop-filter: blur(8px);
+}
+.tb-instance-card:hover .tb-ic-close { opacity: 1; }
+.tb-ic-close:hover {
+  background: #ff5f56;
+  border-color: transparent;
+  color: #fff;
+}
+
+/* Wallpaper actions — match shell buttons */
+.wp-actions {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin-top: 8px;
+  align-items: center;
+}
+.wp-btn {
+  appearance: none;
+  border: 1px solid var(--dock-border, rgba(255,255,255,0.12));
+  background: rgba(255,255,255,0.06);
+  color: inherit;
+  font: inherit;
+  font-size: 12px;
+  padding: 8px 14px;
+  border-radius: 10px;
+  cursor: pointer;
+  transition: background 0.12s, border-color 0.12s;
+}
+.wp-btn:hover {
+  background: rgba(0,120,212,0.22);
+  border-color: rgba(0,120,212,0.4);
+}
+.wp-btn.ghost {
+  background: transparent;
+  opacity: 0.75;
+}
+.wp-btn.ghost:hover { opacity: 1; }
+
+/* Top bar liquid polish */
+body.bubble-pin-topbar #vertical-bubble.pin-topbar {
+  background: rgba(22, 22, 26, 0.55) !important;
+  backdrop-filter: blur(22px) saturate(1.3);
+  -webkit-backdrop-filter: blur(22px) saturate(1.3);
+  border-bottom: 1px solid rgba(255,255,255,0.1);
+  box-shadow: 0 1px 0 rgba(255,255,255,0.04);
+}
+.topbar-dd-menu {
+  background: rgba(28, 28, 32, 0.82) !important;
+  backdrop-filter: blur(20px) saturate(1.25);
+  -webkit-backdrop-filter: blur(20px) saturate(1.25);
+  border: 1px solid rgba(255,255,255,0.12) !important;
+  border-radius: 12px !important;
+  padding: 6px !important;
+  box-shadow: 0 16px 40px rgba(0,0,0,0.4);
+  min-width: 200px;
+}
+.topbar-dd-item {
+  border-radius: 8px;
+  padding: 8px 12px !important;
+}
+.topbar-dd-item:hover {
+  background: rgba(255,255,255,0.1) !important;
+}
+.topbar-menu-item {
+  border-radius: 6px;
+  padding: 4px 8px !important;
+}
+
+
+/* ═══ macOS-style menu bar (topbar pin mode) ═══ */
+body.bubble-pin-topbar #vertical-bubble.pin-topbar {
+  position: fixed !important;
+  top: 0 !important;
+  left: 0 !important;
+  right: 0 !important;
+  width: 100% !important;
+  height: 28px !important;
+  min-height: 28px !important;
+  max-height: 28px !important;
+  margin: 0 !important;
+  padding: 0 10px 0 8px !important;
+  border-radius: 0 !important;
+  border: none !important;
+  border-bottom: 1px solid rgba(255,255,255,0.1) !important;
+  background: rgba(28, 28, 30, 0.72) !important;
+  backdrop-filter: blur(40px) saturate(1.6) !important;
+  -webkit-backdrop-filter: blur(40px) saturate(1.6) !important;
+  box-shadow: none !important;
+  display: flex !important;
+  flex-direction: row !important;
+  align-items: center !important;
+  justify-content: flex-start !important;
+  gap: 0 !important;
+  z-index: 50000 !important;
+  transform: none !important;
+}
+/* Hide floating bubble action buttons — menu bar is the chrome */
+body.bubble-pin-topbar #vertical-bubble.pin-topbar > .bubble-btn {
+  display: none !important;
+}
+body.bubble-pin-topbar #topbar-extras {
+  display: flex !important;
+  flex: 1;
+  width: 100%;
+  height: 100%;
+  align-items: center;
+  justify-content: space-between;
+  margin: 0;
+  padding: 0;
+}
+body.bubble-pin-topbar .topbar-left {
+  gap: 2px;
+  height: 100%;
+}
+body.bubble-pin-topbar .topbar-brand {
+  font-size: 14px;
+  font-weight: 600;
+  padding: 0 10px 0 4px;
+  line-height: 28px;
+  opacity: 0.95;
+}
+body.bubble-pin-topbar .topbar-menu-item {
+  font-size: 13px;
+  font-weight: 500;
+  padding: 0 10px !important;
+  line-height: 28px;
+  height: 28px;
+  border-radius: 0;
+  opacity: 0.92;
+}
+body.bubble-pin-topbar .topbar-menu-item:hover {
+  background: rgba(255,255,255,0.12) !important;
+}
+body.bubble-pin-topbar .topbar-right {
+  gap: 2px;
+  margin-left: auto;
+  height: 100%;
+}
+body.bubble-pin-topbar .topbar-status,
+body.bubble-pin-topbar .topbar-clock {
+  font-size: 12px;
+  line-height: 28px;
+  height: 28px;
+  padding: 0 8px;
+  border-radius: 0;
+  opacity: 0.9;
+  cursor: pointer;
+}
+body.bubble-pin-topbar .topbar-status:hover,
+body.bubble-pin-topbar .topbar-clock:hover {
+  background: rgba(255,255,255,0.1);
+}
+body.bubble-pin-topbar .topbar-dd-menu {
+  top: 28px !important;
+  margin-top: 0 !important;
+  border-radius: 8px !important;
+  background: rgba(40,40,42,0.88) !important;
+  backdrop-filter: blur(28px) saturate(1.4) !important;
+  -webkit-backdrop-filter: blur(28px) saturate(1.4) !important;
+  border: 1px solid rgba(255,255,255,0.12) !important;
+  box-shadow: 0 12px 40px rgba(0,0,0,0.45) !important;
+  min-width: 220px;
+  padding: 6px !important;
+}
+body.bubble-pin-topbar .topbar-dd-item {
+  font-size: 13px !important;
+  padding: 6px 12px !important;
+  border-radius: 6px;
+}
+/* Desktop inset under menu bar */
+body.bubble-pin-topbar #desktop {
+  margin-top: 28px !important;
+}
+body.bubble-pin-topbar #taskbar.pos-top {
+  top: 28px !important;
+}
+
+/* Lock screen crossfade polish */
+#lock-screen {
+  transition: opacity 0.45s ease !important;
+  will-change: opacity;
+}
+body:not(.mica-locked) {
+  /* desktop bg ready under fading lock */
+}
+
+
+/* Top bar pinned app icons */
+.topbar-pins {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  margin-left: 10px;
+  height: 100%;
+  min-width: 0;
+}
+.topbar-pin-btn {
+  appearance: none;
+  border: none;
+  background: transparent;
+  color: inherit;
+  width: 28px;
+  height: 28px;
+  padding: 0;
+  border-radius: 6px;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 13px;
+  opacity: 0.9;
+}
+.topbar-pin-btn:hover {
+  background: rgba(255,255,255,0.12);
+  opacity: 1;
+}
+.topbar-pin-btn img {
+  width: 16px;
+  height: 16px;
+  object-fit: contain;
+  border-radius: 3px;
+}
+
+/* Welcome splash — covers wallpaper stutter */
+#mica-welcome-splash {
+  position: fixed;
+  inset: 0;
+  z-index: 6000000;
+  display: none;
+  align-items: center;
+  justify-content: center;
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 0.55s ease;
+}
+#mica-welcome-splash.mws-in { opacity: 1; }
+#mica-welcome-splash.mws-out { opacity: 0; }
+.mws-blur {
+  position: absolute;
+  inset: 0;
+  background: rgba(18, 18, 22, 0.45);
+  backdrop-filter: blur(18px) saturate(1.2);
+  -webkit-backdrop-filter: blur(18px) saturate(1.2);
+}
+.mws-text {
+  position: relative;
+  font-family: "Segoe Script", "Bradley Hand", "Apple Chancery", "Comic Sans MS", cursive;
+  font-size: clamp(42px, 8vw, 72px);
+  font-weight: 400;
+  letter-spacing: 0.04em;
+  color: rgba(255,255,255,0.92);
+  text-shadow: 0 4px 28px rgba(0,0,0,0.35);
+  user-select: none;
+}
+
+/* Compact Control Centre — all modes */
+#quick-access.qa-compact {
+  width: 272px !important;
+  max-width: 92vw;
+  max-height: min(62vh, 320px) !important;
+  padding: 12px !important;
+  border-radius: 16px !important;
+  background: rgba(28, 28, 32, 0.72) !important;
+  border: 1px solid rgba(255,255,255,0.12) !important;
+  backdrop-filter: blur(28px) saturate(1.35) !important;
+  -webkit-backdrop-filter: blur(28px) saturate(1.35) !important;
+  box-shadow: 0 16px 48px rgba(0,0,0,0.4) !important;
+  gap: 10px;
+  overflow: hidden;
+}
+#quick-access.qa-compact #qa-title {
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  opacity: 0.55;
+  margin: 0 0 2px;
+}
+.qa-c-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  margin-bottom: 4px;
+}
+.qa-c-time {
+  font-size: 28px;
+  font-weight: 300;
+  font-variant-numeric: tabular-nums;
+  line-height: 1.1;
+}
+.qa-c-date {
+  font-size: 11px;
+  opacity: 0.55;
+  margin-top: 2px;
+}
+.qa-c-bat {
+  font-size: 12px;
+  opacity: 0.75;
+  padding: 4px 8px;
+  border-radius: 999px;
+  background: rgba(255,255,255,0.06);
+}
+.qa-c-sliders {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin: 6px 0 4px;
+}
+.qa-c-row {
+  display: grid;
+  grid-template-columns: 22px 1fr 40px;
+  align-items: center;
+  gap: 8px;
+  font-size: 12px;
+}
+.qa-c-row input[type=range] {
+  width: 100%;
+  accent-color: #0a84ff;
+}
+.qa-c-row b {
+  font-size: 11px;
+  font-weight: 500;
+  opacity: 0.7;
+  text-align: right;
+}
+.qa-c-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 6px;
+  margin-top: 4px;
+}
+.qa-c-tile {
+  appearance: none;
+  border: 1px solid rgba(255,255,255,0.08);
+  background: rgba(255,255,255,0.05);
+  color: inherit;
+  border-radius: 10px;
+  padding: 10px 8px;
+  font: inherit;
+  font-size: 11px;
+  cursor: pointer;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  transition: background 0.12s;
+}
+.qa-c-tile span { font-size: 16px; opacity: 0.9; }
+.qa-c-tile:hover {
+  background: rgba(255,255,255,0.12);
+}
+
+
+/* Top bar action slots (same 3 as floating bubble) */
+.topbar-slots {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  height: 100%;
+  margin-right: 4px;
+}
+.topbar-slot {
+  appearance: none;
+  border: none;
+  background: transparent;
+  color: inherit;
+  width: 28px;
+  height: 28px;
+  font-size: 13px;
+  line-height: 28px;
+  text-align: center;
+  cursor: pointer;
+  border-radius: 6px;
+  padding: 0;
+  opacity: 0.92;
+}
+.topbar-slot:hover {
+  background: rgba(255,255,255,0.12);
+  opacity: 1;
+}
+/* Hide pin remnants */
+.topbar-pins { display: none !important; }
+
+/* Control Centre tighter */
+#quick-access.qa-compact {
+  width: 260px !important;
+  max-height: min(56vh, 300px) !important;
+  padding: 14px 14px 12px !important;
+}
+.qa-c-head {
+  margin-bottom: 10px;
+}
+.qa-c-time {
+  font-size: 32px;
+  font-weight: 200;
+  letter-spacing: -0.02em;
+}
+.qa-c-meta {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-top: 4px;
+  font-size: 11px;
+  opacity: 0.65;
+}
+.qa-c-bat {
+  background: rgba(255,255,255,0.08);
+  padding: 2px 8px;
+  border-radius: 999px;
+  font-size: 10px;
+}
+.qa-c-sliders { gap: 10px; margin: 8px 0 10px; }
+.qa-c-row {
+  grid-template-columns: 22px 1fr;
+}
+.qa-c-grid { gap: 8px; }
+.qa-c-tile {
+  padding: 12px 8px;
+  border-radius: 12px;
+  background: rgba(255,255,255,0.06);
+}
+/* Disable welcome splash if present */
+#mica-welcome-splash { display: none !important; }
+
+/* Start menu: never force top-left outside menu-bar mode */
+body:not(.bubble-pin-topbar) #start-menu {
+  /* JS sets coordinates */
+}
+
+
+/* ── Lock / onboarding ── */
+.ls-brand {
+  font-size: 36px;
+  text-align: center;
+  margin-bottom: 8px;
+  opacity: 0.9;
+}
+.ls-title { margin: 0 0 6px 0; text-align: center; font-weight: 600; }
+.ls-sub { margin: 0 0 16px 0; text-align: center; opacity: 0.55; font-size: 12px; }
+.ls-btn {
+  width: 100%;
+  margin-bottom: 8px;
+  padding: 10px 14px;
+  border-radius: 10px;
+  border: 1px solid rgba(255,255,255,0.12);
+  background: rgba(255,255,255,0.08);
+  color: inherit;
+  font: inherit;
+  cursor: pointer;
+}
+.ls-btn.ghost { background: transparent; }
+.ls-btn:hover { background: rgba(255,255,255,0.14); }
+.primary-btn.ls-btn { background: rgba(0,120,212,0.55); border-color: rgba(0,120,212,0.5); }
+.ls-hint { font-size: 11px; opacity: 0.5; text-align: center; margin-top: 8px; line-height: 1.4; }
+.ls-links { display: flex; justify-content: center; gap: 16px; margin-top: 10px; }
+.ls-link {
+  background: none; border: none; color: inherit;
+  font-size: 12px; opacity: 0.65; cursor: pointer; text-decoration: underline;
+  text-underline-offset: 3px;
+}
+.ls-link:hover { opacity: 1; }
+
+.ls-splash {
+  position: absolute;
+  inset: 0;
+  z-index: 5;
+  display: none;
+  align-items: center;
+  justify-content: center;
+  background: rgba(12,12,16,0.35);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  opacity: 0;
+  transition: opacity 0.4s ease;
+  pointer-events: none;
+}
+.ls-splash.in { opacity: 1; }
+.ls-splash.out { opacity: 0; }
+.ls-splash-text {
+  font-family: "Segoe Script", "Bradley Hand", "Apple Chancery", cursive;
+  font-size: clamp(40px, 7vw, 64px);
+  color: rgba(255,255,255,0.92);
+  text-shadow: 0 4px 24px rgba(0,0,0,0.35);
+  letter-spacing: 0.06em;
+}
+
+/* Control Center — time / sliders / recent */
+#quick-access.qa-compact {
+  width: 268px !important;
+  max-height: min(58vh, 340px) !important;
+  padding: 16px 14px 12px !important;
+}
+.qa-c-head { text-align: left; margin-bottom: 14px; }
+.qa-c-time {
+  font-size: 34px;
+  font-weight: 200;
+  letter-spacing: -0.03em;
+  line-height: 1.05;
+}
+.qa-c-date {
+  font-size: 12px;
+  opacity: 0.55;
+  margin-top: 4px;
+}
+.qa-c-sliders {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  margin-bottom: 14px;
+  padding: 10px 10px;
+  border-radius: 12px;
+  background: rgba(255,255,255,0.04);
+  border: 1px solid rgba(255,255,255,0.06);
+}
+.qa-c-row {
+  display: grid;
+  grid-template-columns: 24px 1fr;
+  align-items: center;
+  gap: 10px;
+}
+.qa-c-ico { font-size: 13px; opacity: 0.7; text-align: center; }
+.qa-c-row input[type=range] {
+  width: 100%;
+  height: 4px;
+  accent-color: rgba(255,255,255,0.55);
+}
+.qa-c-recent-label {
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  opacity: 0.45;
+  margin-bottom: 6px;
+}
+.qa-c-recent-list {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.qa-c-recent {
+  appearance: none;
+  border: none;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  font-size: 12px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 8px;
+  border-radius: 8px;
+  cursor: pointer;
+  text-align: left;
+}
+.qa-c-recent:hover:not(:disabled) {
+  background: rgba(255,255,255,0.08);
+}
+.qa-c-recent.empty { opacity: 0.3; cursor: default; }
+.qa-c-ri { width: 22px; text-align: center; font-size: 14px; opacity: 0.85; }
+.qa-c-rn {
+  flex: 1;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+
+/* ═══════════════════════════════════════════
+   Lock screen — liquid glass (10.2.8)
+   ═══════════════════════════════════════════ */
+#lock-screen {
+  position: fixed;
+  inset: 0;
+  z-index: 99999;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: #0c0c10;
+  background-size: cover;
+  background-position: center;
+  transition: opacity 0.45s ease;
+  overflow: hidden;
+}
+.ls-ambient {
+  position: absolute;
+  inset: -20%;
+  background:
+    radial-gradient(ellipse 60% 50% at 20% 30%, rgba(80, 120, 255, 0.18), transparent 55%),
+    radial-gradient(ellipse 50% 40% at 80% 70%, rgba(180, 80, 220, 0.12), transparent 50%),
+    radial-gradient(ellipse 40% 30% at 50% 100%, rgba(0, 180, 200, 0.08), transparent 45%);
+  pointer-events: none;
+  filter: blur(2px);
+  animation: lsAmbient 18s ease-in-out infinite alternate;
+}
+@keyframes lsAmbient {
+  from { transform: translate(0, 0) scale(1); }
+  to { transform: translate(-2%, 1%) scale(1.04); }
+}
+
+.ls-panel {
+  position: relative;
+  z-index: 2;
+  width: min(380px, 92vw);
+  animation: lsPanelIn 0.5s ease both;
+}
+@keyframes lsPanelIn {
+  from { opacity: 0; transform: translateY(12px) scale(0.98); }
+  to { opacity: 1; transform: none; }
+}
+
+.ls-glass {
+  padding: 32px 28px 24px;
+  border-radius: 22px;
+  background: rgba(255, 255, 255, 0.07);
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  box-shadow:
+    0 24px 64px rgba(0, 0, 0, 0.45),
+    inset 0 1px 0 rgba(255, 255, 255, 0.12);
+  backdrop-filter: blur(40px) saturate(1.45);
+  -webkit-backdrop-filter: blur(40px) saturate(1.45);
+  color: rgba(255, 255, 255, 0.94);
+  text-align: center;
+}
+
+.ls-mark {
+  font-size: 40px;
+  line-height: 1;
+  margin-bottom: 14px;
+  opacity: 0.95;
+  filter: drop-shadow(0 4px 16px rgba(0, 0, 0, 0.25));
+}
+.ls-mark.small { font-size: 28px; margin-bottom: 10px; }
+
+.ls-heading {
+  margin: 0 0 6px;
+  font-size: 22px;
+  font-weight: 600;
+  letter-spacing: -0.02em;
+}
+.ls-caption {
+  margin: 0 0 22px;
+  font-size: 13px;
+  opacity: 0.55;
+  font-weight: 400;
+  line-height: 1.4;
+}
+
+.ls-fields {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-bottom: 16px;
+}
+.ls-field {
+  width: 100%;
+  box-sizing: border-box;
+  padding: 12px 14px;
+  border-radius: 12px;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  background: rgba(0, 0, 0, 0.28);
+  color: inherit;
+  font: inherit;
+  font-size: 14px;
+  outline: none;
+  transition: border-color 0.15s, background 0.15s;
+}
+.ls-field:focus {
+  border-color: rgba(120, 180, 255, 0.55);
+  background: rgba(0, 0, 0, 0.38);
+}
+.ls-field.pin {
+  text-align: center;
+  font-size: 18px;
+  letter-spacing: 0.35em;
+  padding-left: 1.2em;
+}
+.ls-field option { background: #1a1a1e; color: #eee; }
+
+.ls-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.ls-btn {
+  appearance: none;
+  width: 100%;
+  padding: 12px 16px;
+  border-radius: 12px;
+  font: inherit;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  border: 1px solid transparent;
+  transition: background 0.15s, border-color 0.15s, transform 0.1s;
+}
+.ls-btn:active { transform: scale(0.98); }
+.ls-btn.primary {
+  background: rgba(255, 255, 255, 0.92);
+  color: #111;
+  border-color: rgba(255, 255, 255, 0.5);
+}
+.ls-btn.primary:hover {
+  background: #fff;
+}
+.ls-btn.secondary {
+  background: rgba(255, 255, 255, 0.08);
+  color: inherit;
+  border-color: rgba(255, 255, 255, 0.12);
+}
+.ls-btn.secondary:hover {
+  background: rgba(255, 255, 255, 0.14);
+}
+
+.ls-footnote {
+  margin: 16px 0 0;
+  font-size: 11px;
+  opacity: 0.45;
+  line-height: 1.45;
+}
+.ls-footer-links {
+  margin-top: 16px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+.ls-text-btn {
+  appearance: none;
+  background: none;
+  border: none;
+  color: inherit;
+  font: inherit;
+  font-size: 12px;
+  opacity: 0.55;
+  cursor: pointer;
+  padding: 4px;
+}
+.ls-text-btn:hover { opacity: 0.95; }
+.ls-dot { opacity: 0.3; font-size: 12px; }
+
+/* Welcome splash */
+.ls-splash {
+  position: absolute;
+  inset: 0;
+  z-index: 20;
+  display: none;
+  align-items: center;
+  justify-content: center;
+  background: rgba(8, 8, 12, 0.4);
+  backdrop-filter: blur(28px) saturate(1.2);
+  -webkit-backdrop-filter: blur(28px) saturate(1.2);
+  opacity: 0;
+  transition: opacity 0.5s ease;
+  pointer-events: none;
+}
+.ls-splash.in { opacity: 1; }
+.ls-splash.out { opacity: 0; }
+.ls-splash-inner {
+  text-align: center;
+  transform: translateY(6px);
+  transition: transform 0.5s ease, opacity 0.5s ease;
+  opacity: 0.85;
+}
+.ls-splash.in .ls-splash-inner {
+  transform: none;
+  opacity: 1;
+}
+.ls-splash-mark {
+  font-size: 28px;
+  margin-bottom: 12px;
+  opacity: 0.8;
+}
+.ls-splash-text {
+  font-family: "Segoe Script", "Bradley Hand", "Apple Chancery", "Snell Roundhand", cursive;
+  font-size: clamp(48px, 9vw, 76px);
+  font-weight: 400;
+  letter-spacing: 0.08em;
+  color: rgba(255, 255, 255, 0.95);
+  text-shadow: 0 6px 32px rgba(0, 0, 0, 0.35);
+  user-select: none;
+}
+
+/* Hide legacy class hooks if any remain */
+.ls-box { display: none !important; }

@@ -1,0 +1,648 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Pure 3D Editor (Modding API Update)</title>
+    <style>
+        :root {
+            --bg-base: #1e1e1e;
+            --bg-panel: #252526;
+            --bg-header: #333333;
+            --accent: #007acc;
+            --accent-hover: #005f9e;
+            --export-color: #d35400;
+            --export-hover: #e67e22;
+            --play-color: #27ae60;
+            --play-hover: #2ecc71;
+            --plugin-color: #8e44ad;
+            --plugin-hover: #9b59b6;
+            --text-main: #cccccc;
+            --text-muted: #888888;
+            --border: #3e3e42;
+        }
+
+        body { margin: 0; display: flex; flex-direction: column; height: 100vh; background: var(--bg-base); font-family: 'Segoe UI', sans-serif; color: var(--text-main); overflow: hidden; font-size: 13px; }
+
+        /* Top Toolbar */
+        #toolbar { height: 50px; background: var(--bg-header); display: flex; align-items: center; padding: 0 10px; border-bottom: 1px solid var(--border); box-shadow: 0 2px 5px rgba(0,0,0,0.2); z-index: 10; gap: 5px; overflow-x: auto; }
+        .toolbar-group { display: flex; gap: 5px; align-items: center; flex-shrink: 0; }
+        .toolbar-divider { width: 1px; height: 30px; background: var(--border); margin: 0 5px; }
+        
+        button { background: transparent; border: 1px solid transparent; color: var(--text-main); padding: 6px 10px; cursor: pointer; border-radius: 4px; font-size: 12px; transition: 0.1s; white-space: nowrap; }
+        button:hover { background: rgba(255,255,255,0.1); border-color: var(--border); }
+        button.active { background: var(--accent); color: white; border-color: var(--accent); }
+        button.primary { background: var(--accent); color: white; border: 1px solid var(--accent-hover); }
+        button.primary:hover { background: var(--accent-hover); }
+        
+        button.export-btn { background: var(--export-color); color: white; font-weight: bold; }
+        button.export-btn:hover { background: var(--export-hover); }
+        
+        button.play-btn { background: var(--play-color); color: white; font-weight: bold; display: none; }
+        button.play-btn:hover { background: var(--play-hover); }
+        button.play-btn.playing { background: #c0392b; }
+
+        input[type="range"] { width: 80px; accent-color: var(--accent); cursor: pointer; }
+
+        /* Main Workspace */
+        #workspace { display: flex; flex-grow: 1; height: calc(100vh - 50px); }
+        
+        .panel { background: var(--bg-panel); display: flex; flex-direction: column; transition: width 0.3s cubic-bezier(0.2, 0.8, 0.2, 1); overflow: hidden; white-space: nowrap; }
+        .panel.hidden { width: 0 !important; border: none !important; opacity: 0; }
+        .panel-header { padding: 8px 12px; background: rgba(0,0,0,0.2); font-weight: 600; font-size: 11px; text-transform: uppercase; letter-spacing: 0.5px; border-bottom: 1px solid var(--border); }
+        
+        /* Left Panel - Outliner */
+        #outliner-panel { width: 200px; border-right: 1px solid var(--border); flex-shrink: 0; }
+        #outliner-list { flex-grow: 1; overflow-y: auto; padding: 5px 0; }
+        .tree-item { padding: 6px 15px; cursor: pointer; display: flex; justify-content: space-between; align-items: center; border-left: 3px solid transparent; }
+        .tree-item:hover { background: rgba(255,255,255,0.05); }
+        .tree-item.selected { background: rgba(0, 122, 204, 0.2); border-left-color: var(--accent); color: white; }
+        .tree-item .delete-btn { opacity: 0; color: #ff5555; background: none; border: none; padding: 0 5px; font-weight: bold; }
+        .tree-item:hover .delete-btn { opacity: 1; }
+
+        /* Center - Viewport */
+        #viewport-container { flex-grow: 1; position: relative; background: #111; outline: none; }
+        #viewport { width: 100%; height: 100%; display: block; }
+        
+        #stats-overlay { position: absolute; bottom: 10px; left: 10px; background: rgba(0,0,0,0.6); padding: 5px 10px; border-radius: 4px; color: #00ffcc; font-family: monospace; font-size: 12px; pointer-events: none; z-index: 5; border: 1px solid #333; }
+        #controls-hint { position: absolute; top: 10px; left: 10px; color: rgba(255,255,255,0.4); font-size: 11px; pointer-events: none; }
+
+        /* Right Panel - Properties */
+        #properties-panel { width: 280px; border-left: 1px solid var(--border); flex-shrink: 0; }
+        #properties-content { overflow-y: auto; flex-grow: 1; padding-bottom: 20px; }
+        
+        .prop-section { border-bottom: 1px solid var(--border); }
+        .prop-section-title { padding: 8px 12px; background: rgba(0,0,0,0.1); font-weight: 600; font-size: 12px; }
+        .prop-body { padding: 12px; display: flex; flex-direction: column; gap: 10px; }
+        
+        .prop-row { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+        .prop-label { width: 70px; color: var(--text-muted); font-size: 12px; flex-shrink: 0; }
+        .prop-input-group { display: flex; flex-grow: 1; gap: 5px; }
+        
+        input[type="number"], input[type="text"], select, textarea { width: 100%; background: #111; border: 1px solid var(--border); color: white; padding: 4px 6px; border-radius: 3px; font-family: monospace; font-size: 12px; outline: none; }
+        input[type="number"]:focus, input[type="text"]:focus, select:focus, textarea:focus { border-color: var(--accent); }
+        input[type="color"] { width: 100%; height: 24px; padding: 0; border: 1px solid var(--border); border-radius: 3px; cursor: pointer; background: #111; }
+        textarea { resize: vertical; min-height: 60px; font-family: 'Courier New', Courier, monospace; }
+        
+        .axis-label { color: #555; font-weight: bold; display: flex; align-items: center; justify-content: center; width: 15px; }
+        .axis-x { color: #ff5555; }
+        .axis-y { color: #55ff55; }
+        .axis-z { color: #5555ff; }
+        .btn-full { width: 100%; text-align: center; justify-content: center; }
+
+        /* Modals */
+        .modal-overlay { position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background: rgba(0,0,0,0.7); display: none; justify-content: center; align-items: center; z-index: 100; }
+        .modal { background: var(--bg-panel); border: 1px solid var(--border); border-radius: 6px; width: 450px; padding: 20px; display: flex; flex-direction: column; gap: 15px; max-height: 80vh; overflow-y: auto;}
+        .modal-header { font-size: 16px; font-weight: bold; border-bottom: 1px solid var(--border); padding-bottom: 10px; margin-bottom: 5px; display:flex; justify-content:space-between; align-items:center; }
+        .plugin-item { display: flex; justify-content: space-between; align-items: center; padding: 10px; background: rgba(0,0,0,0.2); border-radius: 4px; border: 1px solid transparent; }
+        .plugin-item.active { border-color: var(--accent); }
+        .custom-plugin { border-color: var(--plugin-color); }
+        
+        .upload-plugin-box { border: 2px dashed var(--border); padding: 15px; text-align: center; border-radius: 6px; cursor: pointer; transition: 0.2s; }
+        .upload-plugin-box:hover { border-color: var(--plugin-hover); background: rgba(142, 68, 173, 0.1); }
+    </style>
+</head>
+<body>
+
+<div id="toolbar">
+    <div class="toolbar-group">
+        <button onclick="toggleUI('outliner-panel')" title="Toggle Scene Graph">◧</button>
+        <button onclick="openPluginModal()" title="Manage Extensions" style="color: #e056fd; font-weight:bold;">🔌 Plugins</button>
+        <button id="btn-play" class="play-btn" onclick="togglePlayMode()">▶ Play Game</button>
+    </div>
+    
+    <div class="toolbar-divider"></div>
+
+    <div class="toolbar-group">
+        <button class="primary" onclick="spawnMesh('Box')">➕ Cube</button>
+        <button class="primary" onclick="spawnMesh('Sphere')">➕ Sphere</button>
+        <button class="primary" onclick="spawnMesh('Cylinder')">➕ Cylinder</button>
+        <button class="primary" onclick="spawnMesh('Cone')">➕ Cone</button>
+        <button class="primary" onclick="spawnMesh('Torus')">➕ Donut</button>
+    </div>
+    
+    <div class="toolbar-divider"></div>
+
+    <div class="toolbar-group">
+        <button id="tool-translate" class="tool-btn active" onclick="setTool('translate')">Move</button>
+        <button id="tool-rotate" class="tool-btn" onclick="setTool('rotate')">Rotate</button>
+        <button id="tool-scale" class="tool-btn" onclick="setTool('scale')">Scale</button>
+    </div>
+
+    <div class="toolbar-divider"></div>
+
+    <div class="toolbar-group">
+        <button class="primary" onclick="applySmooth()" title="Relax/Inflate Vertices">🎈 Relax</button>
+        <span style="font-size: 11px; color: #00ffcc; margin-left: 5px;">Bend:</span>
+        <input type="range" id="bend-slider" min="-3" max="3" step="0.05" value="0" oninput="applyBend(this.value)">
+    </div>
+
+    <div class="toolbar-group" style="margin-left: auto;">
+        <button class="export-btn" onclick="exportScene()">💾 Export GLB</button>
+        <div class="toolbar-divider"></div>
+        <button onclick="toggleUI('properties-panel')" title="Toggle Properties Panel">◨</button>
+    </div>
+</div>
+
+<div id="workspace">
+    <div id="outliner-panel" class="panel">
+        <div class="panel-header">Scene Graph</div>
+        <div id="outliner-list"></div>
+    </div>
+
+    <div id="viewport-container" tabindex="0">
+        <div id="controls-hint">Left-Click: Orbit | Right-Click: Pan | Scroll: Zoom</div>
+        <div id="viewport"></div>
+        <div id="stats-overlay">FPS: 0 | Objects: 0 | Polys: 0</div>
+    </div>
+
+    <div id="properties-panel" class="panel">
+        <div class="panel-header">Properties</div>
+        <div id="properties-content">
+            <div style="padding: 20px; text-align: center; color: var(--text-muted);">Select an object to edit.</div>
+        </div>
+    </div>
+</div>
+
+<div id="plugin-modal" class="modal-overlay">
+    <div class="modal">
+        <div class="modal-header">
+            <span>Plugin Manager</span>
+            <button onclick="document.getElementById('plugin-modal').style.display='none'">✕</button>
+        </div>
+        
+        <p style="color: var(--text-muted); font-size: 12px; margin: 0;">Enable built-in features or upload community mods.</p>
+        
+        <div class="plugin-item" id="plug-game">
+            <div>
+                <strong>🎮 Game Engine (Scripting)</strong>
+                <div style="font-size: 11px; color: var(--text-muted);">Attach JS logic to objects and hit Play.</div>
+            </div>
+            <button onclick="togglePlugin('gameEngine', 'plug-game')">Enable</button>
+        </div>
+
+        <div style="margin-top: 15px; border-top: 1px solid var(--border); padding-top: 15px;">
+            <strong style="color: #e056fd;">Community Plugins (JS)</strong>
+            <div style="font-size: 11px; color: var(--text-muted); margin-bottom: 10px;">Upload .js files to interact with the Pure3D Engine API.</div>
+            
+            <input type="file" id="custom-plugin-upload" accept=".js" style="display:none;" onchange="handlePluginUpload(this)">
+            <div class="upload-plugin-box" onclick="document.getElementById('custom-plugin-upload').click()">
+                ➕ Click to Upload .JS Plugin File
+            </div>
+        </div>
+        
+        <div id="custom-plugins-list" style="display:flex; flex-direction:column; gap:5px; margin-top: 10px;">
+            </div>
+
+    </div>
+</div>
+
+<script type="importmap">
+    {
+        "imports": {
+            "three": "https://unpkg.com/three@0.160.0/build/three.module.js",
+            "three/addons/": "https://unpkg.com/three@0.160.0/examples/jsm/"
+        }
+    }
+</script>
+
+<script type="module">
+    import * as THREE from 'three';
+    import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+    import { TransformControls } from 'three/addons/controls/TransformControls.js';
+    import { GLTFExporter } from 'three/addons/exporters/GLTFExporter.js';
+
+    // --- SETUP SCENE ---
+    const container = document.getElementById('viewport');
+    const scene = new THREE.Scene();
+    scene.background = new THREE.Color(0x1a1a1a);
+    
+    const camera = new THREE.PerspectiveCamera(60, container.clientWidth / container.clientHeight, 0.1, 1000);
+    camera.position.set(5, 5, 8);
+
+    const renderer = new THREE.WebGLRenderer({ antialias: true });
+    renderer.setSize(container.clientWidth, container.clientHeight);
+    renderer.setPixelRatio(window.devicePixelRatio);
+    container.appendChild(renderer.domElement);
+
+    const gridHelper = new THREE.GridHelper(50, 50, 0x444444, 0x222222);
+    scene.add(gridHelper);
+
+    scene.add(new THREE.AmbientLight(0xffffff, 0.6));
+    const dirLight = new THREE.DirectionalLight(0xffffff, 1.2);
+    dirLight.position.set(10, 15, 10);
+    scene.add(dirLight);
+
+    const orbit = new OrbitControls(camera, renderer.domElement);
+    orbit.mouseButtons = { LEFT: THREE.MOUSE.ROTATE, MIDDLE: THREE.MOUSE.DOLLY, RIGHT: THREE.MOUSE.PAN };
+    
+    const transform = new TransformControls(camera, renderer.domElement);
+    transform.addEventListener('dragging-changed', (e) => { orbit.enabled = !e.value; });
+    scene.add(transform);
+
+    // --- STATE MANAGEMENT ---
+    let objectIdCounter = 0;
+    const sceneObjects = [];
+    let selectedObject = null;
+    let isPlaying = false;
+    let initialStates = new Map();
+    window.activePlugins = { gameEngine: false };
+
+    // ==========================================
+    // EXPOSE PURE 3D ENGINE API FOR PLUGINS
+    // ==========================================
+    window.THREE = THREE; // Give plugins access to Three.js math and objects
+    window.Pure3D = {
+        scene: scene,
+        camera: camera,
+        renderer: renderer,
+        objects: sceneObjects,
+        controls: { orbit: orbit, transform: transform },
+        getSelected: () => selectedObject,
+        spawnMesh: (type) => window.spawnMesh(type),
+        refreshUI: () => { updateOutliner(); buildPropertiesPanel(); }
+    };
+
+    window.handlePluginUpload = (input) => {
+        if (!input.files || input.files.length === 0) return;
+        const file = input.files[0];
+        const reader = new FileReader();
+        
+        reader.onload = (e) => {
+            const scriptContent = e.target.result;
+            try {
+                // Inject the custom plugin code into the document securely
+                const scriptTag = document.createElement('script');
+                scriptTag.textContent = `
+                    try {
+                        ${scriptContent}
+                        console.log("Plugin '${file.name}' executed successfully!");
+                    } catch(err) {
+                        console.error("Plugin Error [${file.name}]:", err);
+                        alert("Error running plugin '${file.name}': " + err.message);
+                    }
+                `;
+                document.body.appendChild(scriptTag);
+                
+                // Add to visual UI
+                const list = document.getElementById('custom-plugins-list');
+                const div = document.createElement('div');
+                div.className = 'plugin-item custom-plugin active';
+                div.innerHTML = `
+                    <div>
+                        <strong style="color:#e056fd;">📦 ${file.name}</strong>
+                        <div style="font-size: 11px; color: var(--text-muted);">Running in Engine API</div>
+                    </div>
+                    <span style="color: #2ecc71; font-weight:bold; font-size:11px;">ACTIVE</span>
+                `;
+                list.appendChild(div);
+                
+            } catch(err) {
+                alert("Failed to load plugin: " + err.message);
+            }
+        };
+        reader.readAsText(file);
+        input.value = ""; // Reset input
+    };
+    // ==========================================
+
+    window.toggleUI = (id) => {
+        document.getElementById(id).classList.toggle('hidden');
+        setTimeout(() => window.dispatchEvent(new Event('resize')), 300);
+    };
+
+    window.openPluginModal = () => { document.getElementById('plugin-modal').style.display = 'flex'; };
+    
+    window.togglePlugin = (pluginName, uiId) => {
+        activePlugins[pluginName] = !activePlugins[pluginName];
+        const btn = document.querySelector(`#${uiId} button`);
+        
+        if (activePlugins[pluginName]) {
+            document.getElementById(uiId).classList.add('active');
+            btn.innerText = "Disable"; btn.classList.add('primary');
+            if(pluginName === 'gameEngine') document.getElementById('btn-play').style.display = 'inline-block';
+        } else {
+            document.getElementById(uiId).classList.remove('active');
+            btn.innerText = "Enable"; btn.classList.remove('primary');
+            if(pluginName === 'gameEngine') {
+                document.getElementById('btn-play').style.display = 'none';
+                if(isPlaying) togglePlayMode();
+            }
+        }
+        buildPropertiesPanel();
+    };
+
+    window.togglePlayMode = () => {
+        isPlaying = !isPlaying;
+        const btn = document.getElementById('btn-play');
+        if (isPlaying) {
+            btn.innerText = "⏹ Stop Game"; btn.classList.add('playing'); transform.detach();
+            sceneObjects.forEach(obj => { initialStates.set(obj.userData.id, { pos: obj.position.clone(), rot: obj.rotation.clone(), sca: obj.scale.clone() }); });
+        } else {
+            btn.innerText = "▶ Play Game"; btn.classList.remove('playing');
+            sceneObjects.forEach(obj => {
+                const state = initialStates.get(obj.userData.id);
+                if (state) { obj.position.copy(state.pos); obj.rotation.copy(state.rot); obj.scale.copy(state.sca); }
+            });
+            if (selectedObject) selectObject(selectedObject);
+        }
+    };
+
+    // --- CORE EDITOR FUNCTIONS ---
+    window.spawnMesh = (type, segments = 16) => {
+        let geometry;
+        if (type === 'Box') geometry = new THREE.BoxGeometry(1, 1, 1, segments, segments, segments);
+        else if (type === 'Sphere') geometry = new THREE.SphereGeometry(0.5, segments*2, segments*2);
+        else if (type === 'Cylinder') geometry = new THREE.CylinderGeometry(0.5, 0.5, 1, segments*2, segments);
+        else if (type === 'Cone') geometry = new THREE.ConeGeometry(0.5, 1, segments*2, segments);
+        else if (type === 'Torus') { geometry = new THREE.TorusGeometry(0.4, 0.15, segments*2, segments*4); geometry.rotateX(Math.PI / 2); }
+
+        const material = new THREE.MeshStandardMaterial({ 
+            color: new THREE.Color().setHSL(Math.random(), 0.7, 0.5), roughness: 0.3, metalness: 0.1
+        });
+
+        const mesh = new THREE.Mesh(geometry, material);
+        mesh.position.y = (type === 'Torus') ? 0.15 : 0.5;
+
+        mesh.userData = { 
+            id: `obj_${++objectIdCounter}`, name: `${type} ${objectIdCounter}`, baseType: type, segments: segments, 
+            matType: 'Standard', script: '// object.position.y += Math.sin(time) * 0.01;',
+            origPositions: Array.from(geometry.attributes.position.array) 
+        };
+
+        scene.add(mesh); sceneObjects.push(mesh);
+        updateOutliner(); selectObject(mesh);
+    };
+
+    window.deleteObject = (id, event) => {
+        if (event) event.stopPropagation();
+        const index = sceneObjects.findIndex(obj => obj.userData.id === id);
+        if (index > -1) {
+            const mesh = sceneObjects[index];
+            scene.remove(mesh); mesh.geometry.dispose();
+            if(mesh.material.map) mesh.material.map.dispose(); mesh.material.dispose();
+            sceneObjects.splice(index, 1);
+            if (selectedObject === mesh) selectObject(null);
+            updateOutliner();
+        }
+    };
+
+    function selectObject(mesh) {
+        selectedObject = mesh;
+        if (mesh && !isPlaying) transform.attach(mesh); else transform.detach();
+        const slider = document.getElementById('bend-slider'); if(slider) slider.value = 0;
+        updateOutlinerHighlight(); buildPropertiesPanel();
+    }
+
+    // --- MESH & MATERIAL ---
+    window.subdivideObject = () => {
+        if (!selectedObject) return;
+        const type = selectedObject.userData.baseType;
+        const newSegments = selectedObject.userData.segments * 2;
+        if (newSegments > 64) { alert("Max subdivision reached!"); return; }
+
+        const oldPos = selectedObject.position.clone(); const oldRot = selectedObject.rotation.clone(); const oldSca = selectedObject.scale.clone();
+        const oldMat = selectedObject.material; const oldData = selectedObject.userData;
+
+        const index = sceneObjects.indexOf(selectedObject);
+        scene.remove(selectedObject); selectedObject.geometry.dispose(); sceneObjects.splice(index, 1);
+
+        let geometry;
+        if (type === 'Box') geometry = new THREE.BoxGeometry(1, 1, 1, newSegments, newSegments, newSegments);
+        else if (type === 'Sphere') geometry = new THREE.SphereGeometry(0.5, newSegments*2, newSegments*2);
+        else if (type === 'Cylinder') geometry = new THREE.CylinderGeometry(0.5, 0.5, 1, newSegments*2, newSegments);
+        else if (type === 'Cone') geometry = new THREE.ConeGeometry(0.5, 1, newSegments*2, newSegments);
+        else if (type === 'Torus') { geometry = new THREE.TorusGeometry(0.4, 0.15, newSegments*2, newSegments*4); geometry.rotateX(Math.PI / 2); }
+
+        const newMesh = new THREE.Mesh(geometry, oldMat);
+        newMesh.position.copy(oldPos); newMesh.rotation.copy(oldRot); newMesh.scale.copy(oldSca);
+        newMesh.userData = { ...oldData, segments: newSegments, origPositions: Array.from(geometry.attributes.position.array) };
+
+        scene.add(newMesh); sceneObjects.push(newMesh); selectObject(newMesh);
+    };
+
+    window.changeMaterialType = (type) => {
+        if (!selectedObject) return;
+        const oldMat = selectedObject.material;
+        const params = { color: oldMat.color, map: oldMat.map, wireframe: oldMat.wireframe };
+        let newMat;
+        
+        if (type === 'Standard') newMat = new THREE.MeshStandardMaterial({...params, roughness: 0.3, metalness: 0.1});
+        else if (type === 'Matte') newMat = new THREE.MeshLambertMaterial(params);
+        else if (type === 'Metal') newMat = new THREE.MeshStandardMaterial({...params, roughness: 0.2, metalness: 0.9});
+        else if (type === 'Glass') newMat = new THREE.MeshPhysicalMaterial({...params, transmission: 0.9, opacity: 1, transparent: true, roughness: 0.1, ior: 1.5});
+        else if (type === 'Unlit') newMat = new THREE.MeshBasicMaterial(params);
+        
+        selectedObject.material.dispose(); selectedObject.material = newMat; selectedObject.userData.matType = type;
+    };
+
+    window.handleTextureUpload = (input) => {
+        if (!selectedObject || !input.files || input.files.length === 0) return;
+        const file = input.files[0]; const reader = new FileReader();
+        reader.onload = function(e) {
+            const img = new Image(); img.src = e.target.result;
+            img.onload = () => {
+                const texture = new THREE.Texture(img); texture.needsUpdate = true; texture.colorSpace = THREE.SRGBColorSpace; 
+                selectedObject.material.map = texture; selectedObject.material.needsUpdate = true;
+            };
+        }; reader.readAsDataURL(file);
+    };
+
+    window.removeTexture = () => {
+        if (!selectedObject) return;
+        if (selectedObject.material.map) { selectedObject.material.map.dispose(); selectedObject.material.map = null; selectedObject.material.needsUpdate = true; }
+        document.getElementById('tex-upload').value = "";
+    };
+
+    // --- MODIFIERS ---
+    window.applyBend = (amount) => {
+        if (!selectedObject) return; const geo = selectedObject.geometry; const pos = geo.attributes.position; const orig = selectedObject.userData.origPositions;
+        for (let i = 0; i < pos.count; i++) {
+            let x = orig[i*3]; let y = orig[i*3+1]; let z = orig[i*3+2];
+            let bendAngle = y * parseFloat(amount);
+            pos.setXYZ(i, x, Math.cos(bendAngle) * y - Math.sin(bendAngle) * z, Math.sin(bendAngle) * y + Math.cos(bendAngle) * z);
+        } pos.needsUpdate = true; geo.computeVertexNormals();
+    };
+
+    window.applySmooth = () => {
+        if (!selectedObject) return; const geo = selectedObject.geometry; const pos = geo.attributes.position; const orig = selectedObject.userData.origPositions;
+        for (let i = 0; i < pos.count; i++) {
+            let v = new THREE.Vector3().fromBufferAttribute(pos, i); let len = v.length(); v.lerp(v.clone().normalize().multiplyScalar(len * 1.05), 0.2); 
+            pos.setXYZ(i, v.x, v.y, v.z); orig[i*3] = v.x; orig[i*3+1] = v.y; orig[i*3+2] = v.z;
+        } pos.needsUpdate = true; geo.computeVertexNormals(); document.getElementById('bend-slider').value = 0;
+    };
+
+    // --- UI PANELS ---
+    function updateOutliner() {
+        const list = document.getElementById('outliner-list'); list.innerHTML = '';
+        sceneObjects.forEach(obj => {
+            const div = document.createElement('div'); div.className = 'tree-item'; div.id = `tree-${obj.userData.id}`;
+            div.innerHTML = `<span>🧊 ${obj.userData.name}</span><button class="delete-btn" onclick="deleteObject('${obj.userData.id}', event)">✕</button>`;
+            div.onclick = () => selectObject(obj); list.appendChild(div);
+        }); updateOutlinerHighlight();
+    }
+
+    function updateOutlinerHighlight() {
+        document.querySelectorAll('.tree-item').forEach(el => el.classList.remove('selected'));
+        if (selectedObject) { const el = document.getElementById(`tree-${selectedObject.userData.id}`); if (el) el.classList.add('selected'); }
+    }
+
+    function buildPropertiesPanel() {
+        const panel = document.getElementById('properties-content');
+        if (!selectedObject) { panel.innerHTML = '<div style="padding: 20px; text-align: center; color: var(--text-muted);">Select an object to edit.</div>'; return; }
+
+        const obj = selectedObject; const hexColor = '#' + obj.material.color.getHexString();
+        const mType = obj.userData.matType || 'Standard';
+
+        let html = `
+            <div class="prop-section"><div class="prop-section-title">General</div><div class="prop-body">
+                <div class="prop-row"><span class="prop-label">Name</span><input type="text" value="${obj.userData.name}" onchange="updateObjectName(this.value)"></div>
+            </div></div>
+
+            <div class="prop-section"><div class="prop-section-title">Transform</div><div class="prop-body">
+                <div class="prop-row"><span class="prop-label">Pos</span><div class="prop-input-group">
+                    <span class="axis-label axis-x">X</span><input type="number" id="pos-x" step="0.1" value="${obj.position.x.toFixed(2)}" oninput="applyTransformInput()">
+                    <span class="axis-label axis-y">Y</span><input type="number" id="pos-y" step="0.1" value="${obj.position.y.toFixed(2)}" oninput="applyTransformInput()">
+                    <span class="axis-label axis-z">Z</span><input type="number" id="pos-z" step="0.1" value="${obj.position.z.toFixed(2)}" oninput="applyTransformInput()">
+                </div></div>
+                <div class="prop-row"><span class="prop-label">Rot</span><div class="prop-input-group">
+                    <span class="axis-label axis-x">X</span><input type="number" id="rot-x" step="5" value="${THREE.MathUtils.radToDeg(obj.rotation.x).toFixed(1)}" oninput="applyTransformInput()">
+                    <span class="axis-label axis-y">Y</span><input type="number" id="rot-y" step="5" value="${THREE.MathUtils.radToDeg(obj.rotation.y).toFixed(1)}" oninput="applyTransformInput()">
+                    <span class="axis-label axis-z">Z</span><input type="number" id="rot-z" step="5" value="${THREE.MathUtils.radToDeg(obj.rotation.z).toFixed(1)}" oninput="applyTransformInput()">
+                </div></div>
+                <div class="prop-row"><span class="prop-label">Scale</span><div class="prop-input-group">
+                    <span class="axis-label axis-x">X</span><input type="number" id="sca-x" step="0.1" value="${obj.scale.x.toFixed(2)}" oninput="applyTransformInput()">
+                    <span class="axis-label axis-y">Y</span><input type="number" id="sca-y" step="0.1" value="${obj.scale.y.toFixed(2)}" oninput="applyTransformInput()">
+                    <span class="axis-label axis-z">Z</span><input type="number" id="sca-z" step="0.1" value="${obj.scale.z.toFixed(2)}" oninput="applyTransformInput()">
+                </div></div>
+            </div></div>
+
+            <div class="prop-section"><div class="prop-section-title">Geometry</div><div class="prop-body">
+                <button class="primary btn-full" onclick="subdivideObject()">🔲 Subdivide Mesh</button>
+            </div></div>
+
+            <div class="prop-section"><div class="prop-section-title">Material & Texture</div><div class="prop-body">
+                <div class="prop-row"><span class="prop-label">Type</span>
+                    <select onchange="changeMaterialType(this.value)">
+                        <option value="Standard" ${mType==='Standard'?'selected':''}>Standard (Glossy)</option>
+                        <option value="Matte" ${mType==='Matte'?'selected':''}>Matte (Rough)</option>
+                        <option value="Metal" ${mType==='Metal'?'selected':''}>Metal</option>
+                        <option value="Glass" ${mType==='Glass'?'selected':''}>Glass</option>
+                        <option value="Unlit" ${mType==='Unlit'?'selected':''}>Basic (Unlit)</option>
+                    </select>
+                </div>
+                <div class="prop-row"><span class="prop-label">Color</span><input type="color" value="${hexColor}" oninput="updateObjectColor(this.value)"></div>
+                <div class="prop-row"><span class="prop-label">Image Map</span><div style="display:flex; gap:5px; width:100%;">
+                    <input type="file" id="tex-upload" accept="image/png, image/jpeg, image/webp" style="display:none;" onchange="handleTextureUpload(this)">
+                    <button class="primary" onclick="document.getElementById('tex-upload').click()" style="flex-grow:1;">📁 Upload</button>
+                    <button onclick="removeTexture()" style="color:#ff5555;">✕</button>
+                </div></div>
+                <div class="prop-row"><span class="prop-label">Wireframe</span><input type="checkbox" ${obj.material.wireframe ? 'checked' : ''} onchange="updateObjectWireframe(this.checked)"></div>
+            </div></div>
+        `;
+
+        if (activePlugins.gameEngine) {
+            html += `
+            <div class="prop-section"><div class="prop-section-title" style="color:#2ecc71;">🎮 Script (Runs on Play)</div><div class="prop-body">
+                <textarea onchange="updateScript(this.value)" placeholder="object.rotation.y += 0.01;">${obj.userData.script}</textarea>
+            </div></div>`;
+        }
+        panel.innerHTML = html;
+    }
+
+    // --- PROPERTY HANDLERS ---
+    window.updateObjectName = (v) => { if(selectedObject) { selectedObject.userData.name = v; updateOutliner(); }};
+    window.updateObjectColor = (v) => { if(selectedObject) selectedObject.material.color.set(v); };
+    window.updateObjectWireframe = (v) => { if(selectedObject) selectedObject.material.wireframe = v; };
+    window.updateScript = (v) => { if(selectedObject) selectedObject.userData.script = v; };
+
+    window.applyTransformInput = () => {
+        if (!selectedObject) return;
+        selectedObject.position.set( parseFloat(document.getElementById('pos-x').value)||0, parseFloat(document.getElementById('pos-y').value)||0, parseFloat(document.getElementById('pos-z').value)||0 );
+        selectedObject.rotation.set( THREE.MathUtils.degToRad(parseFloat(document.getElementById('rot-x').value)||0), THREE.MathUtils.degToRad(parseFloat(document.getElementById('rot-y').value)||0), THREE.MathUtils.degToRad(parseFloat(document.getElementById('rot-z').value)||0) );
+        selectedObject.scale.set( parseFloat(document.getElementById('sca-x').value)||1, parseFloat(document.getElementById('sca-y').value)||1, parseFloat(document.getElementById('sca-z').value)||1 );
+    };
+
+    transform.addEventListener('change', () => {
+        if (!selectedObject) return;
+        const px = document.getElementById('pos-x');
+        if (px) {
+            px.value = selectedObject.position.x.toFixed(2); document.getElementById('pos-y').value = selectedObject.position.y.toFixed(2); document.getElementById('pos-z').value = selectedObject.position.z.toFixed(2);
+            document.getElementById('rot-x').value = THREE.MathUtils.radToDeg(selectedObject.rotation.x).toFixed(1); document.getElementById('rot-y').value = THREE.MathUtils.radToDeg(selectedObject.rotation.y).toFixed(1); document.getElementById('rot-z').value = THREE.MathUtils.radToDeg(selectedObject.rotation.z).toFixed(1);
+            document.getElementById('sca-x').value = selectedObject.scale.x.toFixed(2); document.getElementById('sca-y').value = selectedObject.scale.y.toFixed(2); document.getElementById('sca-z').value = selectedObject.scale.z.toFixed(2);
+        }
+    });
+
+    window.setTool = (mode) => {
+        transform.setMode(mode);
+        document.querySelectorAll('.tool-btn').forEach(b => b.classList.remove('active'));
+        document.getElementById(`tool-${mode}`).classList.add('active');
+    };
+
+    // --- EXPORTER ---
+    window.exportScene = () => {
+        if (sceneObjects.length === 0) { alert("Scene is empty!"); return; }
+        const exporter = new GLTFExporter();
+        exporter.parse(sceneObjects, function(result) {
+            const blob = new Blob([result], { type: 'application/octet-stream' });
+            try {
+                if (window.parent && window.parent.micaSaveBlob) {
+                    window.parent.micaSaveBlob(blob, 'MyScene.glb', 'Documents');
+                    return;
+                }
+            } catch (e) {}
+            const url = URL.createObjectURL(blob);
+            const link = document.createElement('a'); link.style.display = 'none'; link.href = url; link.download = 'MyScene.glb';
+            document.body.appendChild(link); link.click(); document.body.removeChild(link); URL.revokeObjectURL(url);
+        }, function(error) { console.error(error); alert("Export failed."); }, { binary: true });
+    };
+
+    // --- INPUTS ---
+    const raycaster = new THREE.Raycaster(); const mouse = new THREE.Vector2(); let mouseDownPos = { x: 0, y: 0 };
+    container.addEventListener('pointerdown', (e) => { mouseDownPos = { x: e.clientX, y: e.clientY }; });
+    container.addEventListener('pointerup', (e) => {
+        if (e.button !== 0 || transform.dragging || isPlaying) return;
+        if (Math.abs(e.clientX - mouseDownPos.x) + Math.abs(e.clientY - mouseDownPos.y) > 5) return;
+        const rect = container.getBoundingClientRect(); mouse.x = ((e.clientX - rect.left) / rect.width) * 2 - 1; mouse.y = -((e.clientY - rect.top) / rect.height) * 2 + 1;
+        raycaster.setFromCamera(mouse, camera); const intersects = raycaster.intersectObjects(sceneObjects, true);
+        selectObject(intersects.length > 0 ? intersects[0].object : null);
+    });
+
+    window.addEventListener('keydown', (e) => {
+        if ((e.key === 'Delete' || e.key === 'Backspace') && selectedObject && !isPlaying) {
+            if (document.activeElement.tagName === 'INPUT' || document.activeElement.tagName === 'TEXTAREA') return;
+            deleteObject(selectedObject.userData.id);
+        }
+    });
+
+    // --- RENDER LOOP ---
+    let lastTime = performance.now(); let frameCount = 0;
+
+    function animate() {
+        requestAnimationFrame(animate);
+        
+        if (isPlaying) {
+            const time = performance.now() / 1000;
+            sceneObjects.forEach(obj => {
+                if (obj.userData.script) {
+                    try { const fn = new Function('object', 'time', obj.userData.script); fn(obj, time); } catch(e) {}
+                }
+            });
+        }
+        renderer.render(scene, camera);
+
+        frameCount++; let now = performance.now();
+        if (now - lastTime >= 1000) {
+            document.getElementById('stats-overlay').innerText = `FPS: ${frameCount} | Objects: ${sceneObjects.length} | Polys: ${renderer.info.render.triangles}`;
+            frameCount = 0; lastTime = now;
+        }
+    }
+
+    new ResizeObserver(() => {
+        camera.aspect = container.clientWidth / container.clientHeight;
+        camera.updateProjectionMatrix(); renderer.setSize(container.clientWidth, container.clientHeight);
+    }).observe(container);
+
+    animate();
+</script>
+</body>
+</html>

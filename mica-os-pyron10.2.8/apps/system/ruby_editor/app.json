@@ -1,0 +1,9 @@
+{
+  "id": "ruby_editor",
+  "name": "Ruby Editor",
+  "icon": "\u270f\ufe0f",
+  "type": "system",
+  "format": 2,
+  "engine": "builtin",
+  "builtin": "Ruby Editor"
+}

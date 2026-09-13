@@ -1,0 +1,9 @@
+{
+  "id": "amber_settings",
+  "name": "Amber Settings",
+  "icon": "\u2699\ufe0f",
+  "type": "system",
+  "format": 2,
+  "engine": "builtin",
+  "builtin": "Amber Settings"
+}

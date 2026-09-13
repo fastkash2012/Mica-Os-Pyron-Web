@@ -1,0 +1,9 @@
+{
+  "id": "package_manager",
+  "name": "Package Manager",
+  "icon": "📦",
+  "type": "system",
+  "format": 2,
+  "engine": "builtin",
+  "builtin": "Package Manager"
+}

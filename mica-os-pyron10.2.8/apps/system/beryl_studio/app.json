@@ -1,0 +1,9 @@
+{
+  "id": "beryl_studio",
+  "name": "Beryl Studio",
+  "icon": "\ud83d\udee0\ufe0f",
+  "type": "system",
+  "format": 2,
+  "engine": "builtin",
+  "builtin": "Beryl Studio"
+}

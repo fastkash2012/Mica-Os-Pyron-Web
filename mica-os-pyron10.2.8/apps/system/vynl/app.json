@@ -1,0 +1,9 @@
+{
+  "id": "vynl",
+  "name": "Vynl",
+  "icon": "\ud83c\udfa7",
+  "type": "system",
+  "format": 2,
+  "engine": "builtin",
+  "builtin": "Vynl"
+}

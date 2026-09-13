@@ -1,0 +1,9 @@
+{
+  "id": "onyx_terminal",
+  "name": "Onyx Terminal",
+  "icon": "\ud83d\udcbb",
+  "type": "system",
+  "format": 2,
+  "engine": "builtin",
+  "builtin": "Onyx Terminal"
+}

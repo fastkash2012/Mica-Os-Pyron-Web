@@ -1,0 +1,10 @@
+{
+  "id": "pyro_browser",
+  "name": "Pyro Browser",
+  "icon": "\ud83c\udf10",
+  "type": "system",
+  "format": 2,
+  "engine": "native",
+  "builtin": "Pyro Browser",
+  "native": "pyro_browser.py"
+}
